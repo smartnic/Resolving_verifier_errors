@@ -1,0 +1,45 @@
+
+https://github.com/torvalds/linux/blob/master/kernel/bpf/verifier.c#L178
+There is a constant: #define BPF_COMPLEXITY_LIMIT_JMP_SEQ	8192
+
+In version 1, the end error states that a certain number of jumps is too complex.
+
+Next attempt: 
+
+In here we try to bound length_of_data by a certain value like 8000.
+Still we get a similar error:
+"The sequence of 8193 jumps is too complex."
+
+Understanding: 8193 (# of jumps) is not equal to the number of iterations of the for loop. 'n' number of iterations might cause many more jumps.
+
+Next attempt: version 2
+
+Try to choose a much smaller bound for length of data (# of for loop iterations) as compared to 8193. So, replace the 8000 in check above with a smaller value like 200. Again a similar error occurs.
+
+In the bytecode for version 2:
+
+200:	bf 71 00 00 00 00 00 00	r1 = r7
+
+203:	65 01 1a 00 c8 00 00 00	if r1 s> 200 goto +26 <LBB0_29>
+(At this point we might have some understanding on the bounds of r7
+
+206:	67 07 00 00 20 00 00 00	r7 <<= 32	//right shift by 32 bits
+207:	77 07 00 00 20 00 00 00	r7 >>= 32	//left shift by 32 bits
+							//Net effect: Top 32 bits are unset and only lower 32 bits contribute
+After bit shifting completes the complier just knows that r7 is a 32 bit value whose value can be in the range between 0 and 2^(32)-1.
+Hence the bound check before is kind of ignored.
+
+Later to check the iteration condition in 'LBB0_27:' r7 is used.
+
+
+Next attempt: version 3
+
+Try to put a bound on the number of bits for length_of_data instead of its value. Maybe if a lot of top bits are unset and hence only a few bits are used, the verifier would get a smaller range for this value.
+
+length_of_data &= 31; //length_of_data has only the lower 5 bits set
+
+We are hoping that the verifier might be okay with this since a lower number of set bits corresponds to a smaller range (in this case 0-2^(5)-1 = 0-31) 
+
+
+
+

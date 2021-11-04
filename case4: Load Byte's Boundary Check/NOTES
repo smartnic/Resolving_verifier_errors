@@ -1,0 +1,12 @@
+This sockex1_kern.c compiles and runs without any errors producing the corrrect output according to user space program and also prints the the bytes of the packet.
+
+There is not boundary check performed while loading a byte from the packet to ensure that we are reading a byte withing packet boundaries. This is because it is automatically performed by the bpf_load_byte. We can loop through the entire packet data by keeping the upper boundary as any constant and load_byte takes care of any boundary checks.
+
+However, problem occurs when trying to replace the 8000 with some variable. This problem is dealt with in the previous 2 cases.
+
+
+Link for this property of load_bytes
+https://lwn.net/Articles/686677/
+
+Current bpf programs use LD_ABS, LD_INS instructions which have
+to do 'if (off < skb_headlen)' for every packet access.

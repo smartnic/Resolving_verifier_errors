@@ -1,0 +1,174 @@
+Started off with version 1 which was giving the error trace.
+
+        
+struct __sk_buff {
+	__u32 len;
+	__u32 pkt_type;
+	__u32 mark;
+	__u32 queue_mapping;
+	__u32 protocol;
+	__u32 vlan_present;
+	__u32 vlan_tci;
+	__u32 vlan_proto;
+	__u32 priority;
+	__u32 ingress_ifindex;
+	__u32 ifindex;
+	__u32 tc_index;
+	__u32 cb[5];
+	__u32 hash;
+	__u32 tc_classid;
+	__u32 data;
+	__u32 data_end;
+	__u32 napi_id;
+
+	/* Accessed by BPF_PROG_TYPE_sk_skb types from here to ... */
+	__u32 family;
+	__u32 remote_ip4;	/* Stored in network byte order */
+	__u32 local_ip4;	/* Stored in network byte order */
+	__u32 remote_ip6[4];	/* Stored in network byte order */
+	__u32 local_ip6[4];	/* Stored in network byte order */
+	__u32 remote_port;	/* Stored in network byte order */
+	__u32 local_port;	/* stored in host byte order */
+	/* ... here. */
+
+	__u32 data_meta;
+	__bpf_md_ptr(struct bpf_flow_keys *, flow_keys);
+	__u64 tstamp;
+	__u32 wire_len;
+	__u32 gso_segs;
+	__bpf_md_ptr(struct bpf_sock *, sk);
+	__u32 gso_size;
+};
+
+How the packet is stored inside memory:
+
+Low address
+
+
+	skb->data
+
+	bound check (< data_end)
+
+	skb->data_end (This is unaccessible)
+
+High address
+
+
+
+
+
+
+
+
+parameter of bpf program:
+struct __sk_buff *skb
+
+So, skb points to the above structure (not directly to the packet data).
+
+However you can point to the starting of the data and ending using skb.
+void *data_end = (void *)(long)skb->data_end;
+void *data = (void *)(long)skb->data;
+
+Here 'data' points to the start of the packet (where the link layer header starts).
+'data_end' points to the end of the packet.
+
+load_byte(skb, ETH_HLEN + offsetof(struct iphdr, protocol));
+
+This is not loading a byte from address skb + ETH_HLEN + offsetof(struct iphdr, protocol).
+
+
+
+
+
+
+Note about version 2:
+
+This is the main error for this version:
+; void *data = (void *)(long)skb->data;
+183: (61) r1 = *(u32 *)(r6 +76)
+invalid bpf_context access off=76 size=4
+
+According to stackoverflow, the bpf program type 'BPF_PROG_TYPE_SOCKET_FILTER' does not support direct packet access through skb.
+But 'BPF_PROG_TYPE_SK_SKB' does.
+
+
+
+
+
+
+
+Note about version 3:
+
+This is the version where I tried to change the bpf program type to 'BPF_PROG_TYPE_SK_SKB'.
+Using the same load_byte instructions as before was giving me an error:
+; int index = load_byte(skb, ETH_HLEN + offsetof(struct iphdr, protocol));
+1: (30) r0 = *(u8 *)skb[23]
+BPF_LD_[ABS|IND] instructions not allowed for this program type
+
+
+So, I changes load_bytes to direct pointer accesses.
+
+Although this version has not been used for the final solution, this is an explanation of one of the errors while loading the program.
+Error:
+libbpf: load bpf program failed: Permission denied
+libbpf: -- BEGIN DUMP LOG ---
+libbpf: 
+btf_vmlinux is malformed
+Unrecognized arg#0 type PTR
+; char *data = (char *)(long)skb->data;
+0: (61) r2 = *(u32 *)(r1 +76)
+; char tpc = *(data + ETH_HLEN + offsetof(struct iphdr, protocol));  
+1: (71) r6 = *(u8 *)(r2 +23)
+invalid access to packet, off=23 size=1, R2(id=0,off=23,r=0)
+R2 offset is outside of the packet
+processed 2 insns (limit 1000000) max_states_per_insn 0 total_states 0 peak_states 0 mark_read 0
+
+libbpf: -- END LOG --
+libbpf: failed to load program 'socket1'
+libbpf: failed to load object './sockex1_kern.o'
+
+An error occured while trying to deference a pointer to some location in the packet. The error stopped showing when I fixed the error as shown in version 3 by adding a check to make sure that the pointer 'data + ETH_HLEN + offsetof(struct iphdr, protocol)' is within the bounds of the packet.
+
+However, attaching this bpf program type to a socket seemed complex so I went back to version 2 code.
+
+
+
+
+
+So, for now I am able to print the first 10 bytes of data in hexadecimal form. 10 is just a constant I used instead of looping through the entire length of data. Because, when I am looping through the entire length, I am getting a verifier error message. This is even when I include a check that the offset I am accessing is within skb->len. The error message looks like this: 'The sequence of 8193 jumps is too complex.' I'll try looking into this more and give updates! 
+
+        
+        
+
+
+
+        
+Links used:
+  
+Printing from the kernel program:
+https://nakryiko.com/posts/bpf-tips-printk/
+
+Acii characters and corresponding decimal values to see which characters are meaningful to print:
+https://durofy.com/ascii-values-table-generator-in-c
+
+Understanding the structure of skb:
+https://lwn.net/Articles/636647/
+
+Example of direct packet acccess:
+https://blogs.oracle.com/linux/post/bpf-using-bpf-to-do-packet-transformation
+
+Different kinds of bpf program types:
+https://blogs.oracle.com/linux/post/bpf-a-tour-of-program-types
+
+Full structure of __sk_buff:
+https://elixir.bootlin.com/linux/latest/source/include/uapi/linux/bpf.h#L5147
+
+
+bpf_skb_load_bytes
+bpf_skb_pull_data
+https://man7.org/linux/man-pages/man7/bpf-helpers.7.html
+
+
+
+
+

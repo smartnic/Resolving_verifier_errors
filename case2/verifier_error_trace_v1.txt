@@ -1,0 +1,622 @@
+libbpf: load bpf program failed: Permission denied
+libbpf: -- BEGIN DUMP LOG ---
+libbpf: 
+btf_vmlinux is malformed
+Unrecognized arg#0 type PTR
+; int bpf_prog1(struct __sk_buff *skb)
+0: (bf) r6 = r1
+; int index = load_byte(skb, ETH_HLEN + offsetof(struct iphdr, protocol));
+1: (30) r0 = *(u8 *)skb[23]
+2: (bf) r9 = r0
+; int index = load_byte(skb, ETH_HLEN + offsetof(struct iphdr, protocol));
+3: (63) *(u32 *)(r10 -4) = r9
+; int index2 = load_half(skb, offsetof(struct ethhdr, h_proto));
+4: (28) r0 = *(u16 *)skb[12]
+; int index2 = load_half(skb, offsetof(struct ethhdr, h_proto));
+5: (63) *(u32 *)(r10 -8) = r0
+; int index3 = load_half(skb, ETH_HLEN + offsetof(struct iphdr, id));
+6: (28) r0 = *(u16 *)skb[18]
+; int index3 = load_half(skb, ETH_HLEN + offsetof(struct iphdr, id));
+7: (63) *(u32 *)(r10 -12) = r0
+; int index4 = load_byte(skb, ETH_HLEN);	
+8: (30) r0 = *(u8 *)skb[14]
+9: (bf) r8 = r0
+; int index4 = load_byte(skb, ETH_HLEN);	
+10: (63) *(u32 *)(r10 -16) = r8
+; int index5 = load_half(skb, ETH_HLEN + offsetof(struct iphdr, tot_len));
+11: (28) r0 = *(u16 *)skb[16]
+12: (bf) r7 = r0
+; int index5 = load_half(skb, ETH_HLEN + offsetof(struct iphdr, tot_len));
+13: (63) *(u32 *)(r10 -20) = r7
+14: (b7) r3 = 0
+; int index6 = 0;
+15: (63) *(u32 *)(r10 -24) = r3
+last_idx 15 first_idx 0
+regs=8 stack=0 before 14: (b7) r3 = 0
+; int ihl_bytes = ihl*4;
+16: (67) r8 <<= 2
+17: (57) r8 &= 60
+; offset_of_data += ihl_bytes;	
+18: (bf) r4 = r8
+19: (07) r4 += 14
+; length_of_data = index5 - ihl_bytes;
+20: (1f) r7 -= r8
+; int index = load_byte(skb, ETH_HLEN + offsetof(struct iphdr, protocol));
+21: (bf) r1 = r9
+22: (67) r1 <<= 32
+23: (77) r1 >>= 32
+; 
+24: (b7) r2 = 0
+25: (7b) *(u64 *)(r10 -80) = r2
+last_idx 25 first_idx 0
+regs=4 stack=0 before 24: (b7) r2 = 0
+26: (7b) *(u64 *)(r10 -96) = r4
+27: (bf) r2 = r4
+; if(index == IPPROTO_ICMP){
+28: (55) if r1 != 0x1 goto pc+21
+ R0_w=inv(id=3) R1_w=inv1 R2_w=inv(id=5,umin_value=14,umax_value=74,var_off=(0x2; 0x7c)) R3_w=invP0 R4_w=inv(id=5,umin_value=14,umax_value=74,var_off=(0x2; 0x7c)) R6_w=ctx(id=0,off=0,imm=0) R7_w=inv(id=0) R8_w=inv(id=4,umax_value=60,var_off=(0x0; 0x3c)) R9_w=inv(id=1) R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmm0000 fp-80_w=00000000 fp-96_w=inv
+29: (b7) r1 = 0
+; const char str1[] = "ICMP PACKET\n";
+30: (73) *(u8 *)(r10 -52) = r1
+last_idx 30 first_idx 0
+regs=2 stack=0 before 29: (b7) r1 = 0
+31: (b7) r1 = 173294923
+32: (63) *(u32 *)(r10 -56) = r1
+33: (18) r1 = 0x43415020504d4349
+35: (7b) *(u64 *)(r10 -64) = r1
+36: (bf) r1 = r10
+37: (07) r1 += -64
+; bpf_trace_printk(str1, sizeof(str1));	
+38: (b7) r2 = 13
+39: (85) call bpf_trace_printk#6
+last_idx 39 first_idx 0
+regs=4 stack=0 before 38: (b7) r2 = 13
+40: (b7) r1 = 1
+; length_of_data -= 8;
+41: (7b) *(u64 *)(r10 -80) = r1
+42: (07) r7 += -8
+; index6 = load_byte(skb, ETH_HLEN+ihl_bytes+8);
+43: (bf) r9 = r8
+44: (07) r9 += 22
+; index6 = load_byte(skb, ETH_HLEN+ihl_bytes+8);
+45: (50) r0 = *(u8 *)skb[r9 + 0]
+46: (b7) r3 = 0
+47: (bf) r2 = r9
+; if(index == IPPROTO_UDP){
+48: (61) r9 = *(u32 *)(r10 -4)
+; index6 = load_byte(skb, ETH_HLEN+ihl_bytes+8);
+49: (63) *(u32 *)(r10 -24) = r0
+; int index7 = 0;
+50: (63) *(u32 *)(r10 -28) = r3
+last_idx 50 first_idx 40
+regs=8 stack=0 before 49: (63) *(u32 *)(r10 -24) = r0
+regs=8 stack=0 before 48: (61) r9 = *(u32 *)(r10 -4)
+regs=8 stack=0 before 47: (bf) r2 = r9
+regs=8 stack=0 before 46: (b7) r3 = 0
+; if(index == IPPROTO_UDP){
+51: (bf) r1 = r9
+52: (67) r1 <<= 32
+53: (77) r1 >>= 32
+; if(index == IPPROTO_UDP){
+54: (55) if r1 != 0x11 goto pc+19
+ R0_w=inv(id=0) R1_w=inv17 R2_w=inv(id=6,umin_value=22,umax_value=82,var_off=(0x2; 0x7c)) R3_w=invP0 R6=ctx(id=0,off=0,imm=0) R7_w=inv(id=0) R8=inv(id=4,umax_value=60,var_off=(0x0; 0x3c)) R9_w=inv(id=7,umax_value=4294967295,var_off=(0x0; 0xffffffff)) R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=0000???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80_w=inv1 fp-96=inv
+55: (b7) r1 = 676933
+; const char str1[] = "UDP PACKET\n";
+56: (63) *(u32 *)(r10 -56) = r1
+57: (18) r1 = 0x4b43415020504455
+59: (7b) *(u64 *)(r10 -64) = r1
+60: (bf) r1 = r10
+61: (07) r1 += -64
+62: (7b) *(u64 *)(r10 -88) = r2
+; bpf_trace_printk(str1, sizeof(str1));   
+63: (b7) r2 = 12
+64: (85) call bpf_trace_printk#6
+last_idx 64 first_idx 40
+regs=4 stack=0 before 63: (b7) r2 = 12
+; index7 = load_word(skb, ETH_HLEN+ihl_bytes+8);
+65: (bf) r9 = r8
+66: (07) r9 += 22
+; index7 = load_word(skb, ETH_HLEN+ihl_bytes+8);
+67: (40) r0 = *(u32 *)skb[r9 + 0]
+68: (79) r2 = *(u64 *)(r10 -88)
+69: (b7) r3 = 1
+; offset_of_data += 8;	
+70: (07) r2 += 8
+; length_of_data -= 8;
+71: (07) r7 += -8
+; if(index == IPPROTO_TCP){
+72: (61) r9 = *(u32 *)(r10 -4)
+; index7 = load_word(skb, ETH_HLEN+ihl_bytes+8);
+73: (63) *(u32 *)(r10 -28) = r0
+; if(index == IPPROTO_TCP){
+74: (67) r9 <<= 32
+75: (77) r9 >>= 32
+; if(index == IPPROTO_TCP){
+76: (55) if r9 != 0x6 goto pc+25
+ R0_w=inv(id=0) R2_w=inv(id=0,umin_value=30,umax_value=90,var_off=(0x2; 0x7c)) R3_w=inv1 R6=ctx(id=0,off=0,imm=0) R7_w=inv(id=0) R8=inv(id=4,umax_value=60,var_off=(0x0; 0x3c)) R9_w=inv6 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+77: (b7) r1 = 676933
+; const char str1[] = "TCP PACKET\n";
+78: (63) *(u32 *)(r10 -56) = r1
+79: (18) r1 = 0x4b43415020504354
+81: (7b) *(u64 *)(r10 -64) = r1
+82: (bf) r1 = r10
+83: (07) r1 += -64
+84: (7b) *(u64 *)(r10 -88) = r2
+; bpf_trace_printk(str1, sizeof(str1));  	
+85: (b7) r2 = 12
+86: (85) call bpf_trace_printk#6
+last_idx 86 first_idx 65
+regs=4 stack=0 before 85: (b7) r2 = 12
+; int tcp_byte_with_hlen = load_byte(skb, ETH_HLEN+ihl_bytes+12);
+87: (07) r8 += 26
+; int tcp_byte_with_hlen = load_byte(skb, ETH_HLEN+ihl_bytes+12);
+88: (50) r0 = *(u8 *)skb[r8 + 0]
+89: (bf) r8 = r0
+; int thl_bytes = thl*4;
+90: (77) r8 >>= 2
+91: (57) r8 &= 60
+; offset_of_data += thl_bytes;	
+92: (bf) r9 = r8
+93: (79) r1 = *(u64 *)(r10 -88)
+94: (0f) r9 += r1
+; length_of_data -= thl_bytes;		
+95: (1f) r7 -= r8
+; index7 = load_word(skb, ETH_HLEN+ihl_bytes+thl_bytes);  
+96: (79) r1 = *(u64 *)(r10 -96)
+97: (0f) r8 += r1
+; index7 = load_word(skb, ETH_HLEN+ihl_bytes+thl_bytes);  
+98: (40) r0 = *(u32 *)skb[r8 + 0]
+99: (b7) r3 = 1
+; index7 = load_word(skb, ETH_HLEN+ihl_bytes+thl_bytes);  
+100: (63) *(u32 *)(r10 -28) = r0
+; 
+101: (bf) r2 = r9
+; if (skb->pkt_type != PACKET_OUTGOING)
+102: (61) r1 = *(u32 *)(r6 +4)
+; if (skb->pkt_type != PACKET_OUTGOING)
+103: (55) if r1 != 0x4 goto pc+119
+ R0_w=inv(id=0) R1_w=inv4 R2_w=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R3_w=inv1 R6=ctx(id=0,off=0,imm=0) R7_w=inv(id=0) R8_w=inv(id=0,umin_value=14,umax_value=134,var_off=(0x2; 0xfc)) R9_w=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+104: (bf) r9 = r3
+105: (bf) r8 = r2
+106: (bf) r2 = r10
+; 
+107: (07) r2 += -4
+; value = bpf_map_lookup_elem(&my_map, &index);
+108: (18) r1 = 0xffff9a7efb886000
+110: (85) call bpf_map_lookup_elem#1
+; if (value)
+111: (15) if r0 == 0x0 goto pc+2
+ R0=map_value(id=0,off=0,ks=4,vs=8,imm=0) R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+112: (b7) r1 = 1
+; __sync_fetch_and_add(value, 1);
+113: (db) lock *(u64 *)(r0 +0) += r1
+ R0=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+ R0=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+114: (bf) r2 = r10
+; 
+115: (07) r2 += -8
+; value2 = bpf_map_lookup_elem(&my_map2, &index2);
+116: (18) r1 = 0xffffb8da4319d000
+118: (85) call bpf_map_lookup_elem#1
+; if (value2)
+119: (15) if r0 == 0x0 goto pc+2
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+120: (b7) r1 = 1
+; __sync_fetch_and_add(value2, 1);
+121: (db) lock *(u64 *)(r0 +0) += r1
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+122: (bf) r2 = r10
+; 
+123: (07) r2 += -12
+; value3 = bpf_map_lookup_elem(&my_map3, &index3);
+124: (18) r1 = 0xffffb8da43285000
+126: (85) call bpf_map_lookup_elem#1
+; if (value3)
+127: (15) if r0 == 0x0 goto pc+2
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+128: (b7) r1 = 1
+; __sync_fetch_and_add(value3, 1);	
+129: (db) lock *(u64 *)(r0 +0) += r1
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+130: (bf) r2 = r10
+; 
+131: (07) r2 += -16
+; value4 = bpf_map_lookup_elem(&my_map4, &index4);
+132: (18) r1 = 0xffff9a7efb885000
+134: (85) call bpf_map_lookup_elem#1
+; if(value4)
+135: (15) if r0 == 0x0 goto pc+2
+ R0=map_value(id=0,off=0,ks=4,vs=8,imm=0) R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+136: (b7) r1 = 1
+; __sync_fetch_and_add(value4, 1);
+137: (db) lock *(u64 *)(r0 +0) += r1
+ R0=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+ R0=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+138: (bf) r2 = r10
+; 
+139: (07) r2 += -20
+; value5 = bpf_map_lookup_elem(&my_map5, &index5);
+140: (18) r1 = 0xffffb8da43307000
+142: (85) call bpf_map_lookup_elem#1
+; if(value5)
+143: (15) if r0 == 0x0 goto pc+2
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+144: (b7) r1 = 1
+; __sync_fetch_and_add(value5, 1);
+145: (db) lock *(u64 *)(r0 +0) += r1
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+; if (gotValue6 == 1){	
+146: (79) r1 = *(u64 *)(r10 -80)
+147: (15) if r1 == 0x0 goto pc+8
+last_idx 147 first_idx 146
+regs=2 stack=0 before 146: (79) r1 = *(u64 *)(r10 -80)
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80_r=invP1 fp-88=inv fp-96=inv
+parent didn't have regs=0 stack=200 marks
+last_idx 145 first_idx 135
+regs=0 stack=200 before 145: (db) lock *(u64 *)(r0 +0) += r1
+regs=0 stack=200 before 144: (b7) r1 = 1
+regs=0 stack=200 before 143: (15) if r0 == 0x0 goto pc+2
+regs=0 stack=200 before 142: (85) call bpf_map_lookup_elem#1
+regs=0 stack=200 before 140: (18) r1 = 0xffffb8da43307000
+regs=0 stack=200 before 139: (07) r2 += -20
+regs=0 stack=200 before 138: (bf) r2 = r10
+regs=0 stack=200 before 137: (db) lock *(u64 *)(r0 +0) += r1
+regs=0 stack=200 before 136: (b7) r1 = 1
+regs=0 stack=200 before 135: (15) if r0 == 0x0 goto pc+2
+ R0_rw=map_value_or_null(id=15,off=0,ks=4,vs=8,imm=0) R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24_r=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80_r=invP1 fp-88=inv fp-96=inv
+parent didn't have regs=0 stack=200 marks
+last_idx 134 first_idx 122
+regs=0 stack=200 before 134: (85) call bpf_map_lookup_elem#1
+regs=0 stack=200 before 132: (18) r1 = 0xffff9a7efb885000
+regs=0 stack=200 before 131: (07) r2 += -16
+regs=0 stack=200 before 130: (bf) r2 = r10
+regs=0 stack=200 before 129: (db) lock *(u64 *)(r0 +0) += r1
+regs=0 stack=200 before 128: (b7) r1 = 1
+regs=0 stack=200 before 127: (15) if r0 == 0x0 goto pc+2
+regs=0 stack=200 before 126: (85) call bpf_map_lookup_elem#1
+regs=0 stack=200 before 124: (18) r1 = 0xffffb8da43285000
+regs=0 stack=200 before 123: (07) r2 += -12
+regs=0 stack=200 before 122: (bf) r2 = r10
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16_r=mmmmmmmm fp-24_r=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80_r=invP1 fp-88=inv fp-96=inv
+parent didn't have regs=0 stack=200 marks
+last_idx 121 first_idx 111
+regs=0 stack=200 before 121: (db) lock *(u64 *)(r0 +0) += r1
+regs=0 stack=200 before 120: (b7) r1 = 1
+regs=0 stack=200 before 119: (15) if r0 == 0x0 goto pc+2
+regs=0 stack=200 before 118: (85) call bpf_map_lookup_elem#1
+regs=0 stack=200 before 116: (18) r1 = 0xffffb8da4319d000
+regs=0 stack=200 before 115: (07) r2 += -8
+regs=0 stack=200 before 114: (bf) r2 = r10
+regs=0 stack=200 before 113: (db) lock *(u64 *)(r0 +0) += r1
+regs=0 stack=200 before 112: (b7) r1 = 1
+regs=0 stack=200 before 111: (15) if r0 == 0x0 goto pc+2
+ R0_rw=map_value_or_null(id=12,off=0,ks=4,vs=8,imm=0) R6=ctx(id=0,off=0,imm=0) R7_w=inv(id=0) R8_w=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9_w=inv1 R10=fp0 fp-8_r=mmmmmmmm fp-16_r=mmmmmmmm fp-24_r=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80_r=invP1 fp-88=inv fp-96=inv
+parent didn't have regs=0 stack=200 marks
+last_idx 110 first_idx 87
+regs=0 stack=200 before 110: (85) call bpf_map_lookup_elem#1
+regs=0 stack=200 before 108: (18) r1 = 0xffff9a7efb886000
+regs=0 stack=200 before 107: (07) r2 += -4
+regs=0 stack=200 before 106: (bf) r2 = r10
+regs=0 stack=200 before 105: (bf) r8 = r2
+regs=0 stack=200 before 104: (bf) r9 = r3
+regs=0 stack=200 before 103: (55) if r1 != 0x4 goto pc+119
+regs=0 stack=200 before 102: (61) r1 = *(u32 *)(r6 +4)
+regs=0 stack=200 before 101: (bf) r2 = r9
+regs=0 stack=200 before 100: (63) *(u32 *)(r10 -28) = r0
+regs=0 stack=200 before 99: (b7) r3 = 1
+regs=0 stack=200 before 98: (40) r0 = *(u32 *)skb[r8 + 0]
+regs=0 stack=200 before 97: (0f) r8 += r1
+regs=0 stack=200 before 96: (79) r1 = *(u64 *)(r10 -96)
+regs=0 stack=200 before 95: (1f) r7 -= r8
+regs=0 stack=200 before 94: (0f) r9 += r1
+regs=0 stack=200 before 93: (79) r1 = *(u64 *)(r10 -88)
+regs=0 stack=200 before 92: (bf) r9 = r8
+regs=0 stack=200 before 91: (57) r8 &= 60
+regs=0 stack=200 before 90: (77) r8 >>= 2
+regs=0 stack=200 before 89: (bf) r8 = r0
+regs=0 stack=200 before 88: (50) r0 = *(u8 *)skb[r8 + 0]
+regs=0 stack=200 before 87: (07) r8 += 26
+ R0_w=inv(id=0) R6_r=ctx(id=0,off=0,imm=0) R7_rw=inv(id=0) R8_r=inv(id=4,umax_value=60,var_off=(0x0; 0x3c)) R9_w=inv6 R10=fp0 fp-8_r=mmmmmmmm fp-16_r=mmmmmmmm fp-24_r=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64_w=mmmmmmmm fp-80_r=invP1 fp-88_rw=inv fp-96_r=inv
+parent didn't have regs=0 stack=200 marks
+last_idx 86 first_idx 65
+regs=0 stack=200 before 86: (85) call bpf_trace_printk#6
+regs=0 stack=200 before 85: (b7) r2 = 12
+regs=0 stack=200 before 84: (7b) *(u64 *)(r10 -88) = r2
+regs=0 stack=200 before 83: (07) r1 += -64
+regs=0 stack=200 before 82: (bf) r1 = r10
+regs=0 stack=200 before 81: (7b) *(u64 *)(r10 -64) = r1
+regs=0 stack=200 before 79: (18) r1 = 0x4b43415020504354
+regs=0 stack=200 before 78: (63) *(u32 *)(r10 -56) = r1
+regs=0 stack=200 before 77: (b7) r1 = 676933
+regs=0 stack=200 before 76: (55) if r9 != 0x6 goto pc+25
+regs=0 stack=200 before 75: (77) r9 >>= 32
+regs=0 stack=200 before 74: (67) r9 <<= 32
+regs=0 stack=200 before 73: (63) *(u32 *)(r10 -28) = r0
+regs=0 stack=200 before 72: (61) r9 = *(u32 *)(r10 -4)
+regs=0 stack=200 before 71: (07) r7 += -8
+regs=0 stack=200 before 70: (07) r2 += 8
+regs=0 stack=200 before 69: (b7) r3 = 1
+regs=0 stack=200 before 68: (79) r2 = *(u64 *)(r10 -88)
+regs=0 stack=200 before 67: (40) r0 = *(u32 *)skb[r9 + 0]
+regs=0 stack=200 before 66: (07) r9 += 22
+regs=0 stack=200 before 65: (bf) r9 = r8
+ R0_w=inv(id=0) R6_r=ctx(id=0,off=0,imm=0) R7_rw=inv(id=0) R8_r=inv(id=4,umax_value=60,var_off=(0x0; 0x3c)) R9_w=inv(id=7,umax_value=4294967295,var_off=(0x0; 0xffffffff)) R10=fp0 fp-8_r=mmmmmmmm fp-16_r=mmmmmmmm fp-24_r=mmmmmmmm fp-32=0000???? fp-56_r=???mmmmm fp-64_w=mmmmmmmm fp-80_rw=invP1 fp-88_rw=inv fp-96_r=inv
+parent didn't have regs=0 stack=200 marks
+last_idx 64 first_idx 40
+regs=0 stack=200 before 64: (85) call bpf_trace_printk#6
+regs=0 stack=200 before 63: (b7) r2 = 12
+regs=0 stack=200 before 62: (7b) *(u64 *)(r10 -88) = r2
+regs=0 stack=200 before 61: (07) r1 += -64
+regs=0 stack=200 before 60: (bf) r1 = r10
+regs=0 stack=200 before 59: (7b) *(u64 *)(r10 -64) = r1
+regs=0 stack=200 before 57: (18) r1 = 0x4b43415020504455
+regs=0 stack=200 before 56: (63) *(u32 *)(r10 -56) = r1
+regs=0 stack=200 before 55: (b7) r1 = 676933
+regs=0 stack=200 before 54: (55) if r1 != 0x11 goto pc+19
+regs=0 stack=200 before 53: (77) r1 >>= 32
+regs=0 stack=200 before 52: (67) r1 <<= 32
+regs=0 stack=200 before 51: (bf) r1 = r9
+regs=0 stack=200 before 50: (63) *(u32 *)(r10 -28) = r3
+regs=0 stack=200 before 49: (63) *(u32 *)(r10 -24) = r0
+regs=0 stack=200 before 48: (61) r9 = *(u32 *)(r10 -4)
+regs=0 stack=200 before 47: (bf) r2 = r9
+regs=0 stack=200 before 46: (b7) r3 = 0
+regs=0 stack=200 before 45: (50) r0 = *(u8 *)skb[r9 + 0]
+regs=0 stack=200 before 44: (07) r9 += 22
+regs=0 stack=200 before 43: (bf) r9 = r8
+regs=0 stack=200 before 42: (07) r7 += -8
+regs=0 stack=200 before 41: (7b) *(u64 *)(r10 -80) = r1
+regs=2 stack=0 before 40: (b7) r1 = 1
+148: (bf) r2 = r10
+; 
+149: (07) r2 += -24
+; value6 = bpf_map_lookup_elem(&my_map6, &index6);
+150: (18) r1 = 0xffffb8da43389000
+152: (85) call bpf_map_lookup_elem#1
+; if(value6)
+153: (15) if r0 == 0x0 goto pc+2
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+154: (b7) r1 = 1
+; __sync_fetch_and_add(value6, 1);
+155: (db) lock *(u64 *)(r0 +0) += r1
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=inv1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+; if (gotValue7 == 1){ 
+156: (15) if r9 == 0x0 goto pc+18
+last_idx 156 first_idx 156
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9_r=invP1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+parent didn't have regs=200 stack=0 marks
+last_idx 155 first_idx 146
+regs=200 stack=0 before 155: (db) lock *(u64 *)(r0 +0) += r1
+regs=200 stack=0 before 154: (b7) r1 = 1
+regs=200 stack=0 before 153: (15) if r0 == 0x0 goto pc+2
+regs=200 stack=0 before 152: (85) call bpf_map_lookup_elem#1
+regs=200 stack=0 before 150: (18) r1 = 0xffffb8da43389000
+regs=200 stack=0 before 149: (07) r2 += -24
+regs=200 stack=0 before 148: (bf) r2 = r10
+regs=200 stack=0 before 147: (15) if r1 == 0x0 goto pc+8
+regs=200 stack=0 before 146: (79) r1 = *(u64 *)(r10 -80)
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9_r=invP1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24_r=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80_r=invP1 fp-88=inv fp-96=inv
+parent didn't have regs=200 stack=0 marks
+last_idx 145 first_idx 135
+regs=200 stack=0 before 145: (db) lock *(u64 *)(r0 +0) += r1
+regs=200 stack=0 before 144: (b7) r1 = 1
+regs=200 stack=0 before 143: (15) if r0 == 0x0 goto pc+2
+regs=200 stack=0 before 142: (85) call bpf_map_lookup_elem#1
+regs=200 stack=0 before 140: (18) r1 = 0xffffb8da43307000
+regs=200 stack=0 before 139: (07) r2 += -20
+regs=200 stack=0 before 138: (bf) r2 = r10
+regs=200 stack=0 before 137: (db) lock *(u64 *)(r0 +0) += r1
+regs=200 stack=0 before 136: (b7) r1 = 1
+regs=200 stack=0 before 135: (15) if r0 == 0x0 goto pc+2
+ R0_rw=map_value_or_null(id=15,off=0,ks=4,vs=8,imm=0) R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9_r=invP1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24_r=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80_r=invP1 fp-88=inv fp-96=inv
+parent didn't have regs=200 stack=0 marks
+last_idx 134 first_idx 122
+regs=200 stack=0 before 134: (85) call bpf_map_lookup_elem#1
+regs=200 stack=0 before 132: (18) r1 = 0xffff9a7efb885000
+regs=200 stack=0 before 131: (07) r2 += -16
+regs=200 stack=0 before 130: (bf) r2 = r10
+regs=200 stack=0 before 129: (db) lock *(u64 *)(r0 +0) += r1
+regs=200 stack=0 before 128: (b7) r1 = 1
+regs=200 stack=0 before 127: (15) if r0 == 0x0 goto pc+2
+regs=200 stack=0 before 126: (85) call bpf_map_lookup_elem#1
+regs=200 stack=0 before 124: (18) r1 = 0xffffb8da43285000
+regs=200 stack=0 before 123: (07) r2 += -12
+regs=200 stack=0 before 122: (bf) r2 = r10
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9_r=invP1 R10=fp0 fp-8=mmmmmmmm fp-16_r=mmmmmmmm fp-24_r=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80_r=invP1 fp-88=inv fp-96=inv
+parent didn't have regs=200 stack=0 marks
+last_idx 121 first_idx 111
+regs=200 stack=0 before 121: (db) lock *(u64 *)(r0 +0) += r1
+regs=200 stack=0 before 120: (b7) r1 = 1
+regs=200 stack=0 before 119: (15) if r0 == 0x0 goto pc+2
+regs=200 stack=0 before 118: (85) call bpf_map_lookup_elem#1
+regs=200 stack=0 before 116: (18) r1 = 0xffffb8da4319d000
+regs=200 stack=0 before 115: (07) r2 += -8
+regs=200 stack=0 before 114: (bf) r2 = r10
+regs=200 stack=0 before 113: (db) lock *(u64 *)(r0 +0) += r1
+regs=200 stack=0 before 112: (b7) r1 = 1
+regs=200 stack=0 before 111: (15) if r0 == 0x0 goto pc+2
+ R0_rw=map_value_or_null(id=12,off=0,ks=4,vs=8,imm=0) R6=ctx(id=0,off=0,imm=0) R7_w=inv(id=0) R8_w=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9_rw=invP1 R10=fp0 fp-8_r=mmmmmmmm fp-16_r=mmmmmmmm fp-24_r=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80_r=invP1 fp-88=inv fp-96=inv
+parent didn't have regs=200 stack=0 marks
+last_idx 110 first_idx 87
+regs=200 stack=0 before 110: (85) call bpf_map_lookup_elem#1
+regs=200 stack=0 before 108: (18) r1 = 0xffff9a7efb886000
+regs=200 stack=0 before 107: (07) r2 += -4
+regs=200 stack=0 before 106: (bf) r2 = r10
+regs=200 stack=0 before 105: (bf) r8 = r2
+regs=200 stack=0 before 104: (bf) r9 = r3
+regs=8 stack=0 before 103: (55) if r1 != 0x4 goto pc+119
+regs=8 stack=0 before 102: (61) r1 = *(u32 *)(r6 +4)
+regs=8 stack=0 before 101: (bf) r2 = r9
+regs=8 stack=0 before 100: (63) *(u32 *)(r10 -28) = r0
+regs=8 stack=0 before 99: (b7) r3 = 1
+157: (bf) r2 = r10
+; 
+158: (07) r2 += -28
+; value7 = bpf_map_lookup_elem(&my_map7, &index7);
+159: (18) r1 = 0xffff9a7fcef7fc00
+161: (85) call bpf_map_lookup_elem#1
+162: (b7) r1 = 1
+; long value7default = 1; 
+163: (7b) *(u64 *)(r10 -64) = r1
+; if(value7)
+164: (15) if r0 == 0x0 goto pc+2
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=invP1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64_w=inv1 fp-80=inv1 fp-88=inv fp-96=inv
+; __sync_fetch_and_add(value7, 1);
+165: (db) lock *(u64 *)(r0 +0) += r1
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=invP1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64_w=inv1 fp-80=inv1 fp-88=inv fp-96=inv
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6=ctx(id=0,off=0,imm=0) R7=inv(id=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=invP1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64_w=inv1 fp-80=inv1 fp-88=inv fp-96=inv
+166: (05) goto pc+8
+; bpf_map_update_elem(&my_map7, &index7, &value7default, BPF_NOEXIST);		
+175: (b7) r1 = 10
+; const char str[] = "This is the data payload\n";
+176: (6b) *(u16 *)(r10 -40) = r1
+177: (18) r1 = 0x64616f6c79617020
+179: (7b) *(u64 *)(r10 -48) = r1
+180: (18) r1 = 0x6174616420656874
+182: (7b) *(u64 *)(r10 -56) = r1
+183: (18) r1 = 0x2073692073696854
+185: (7b) *(u64 *)(r10 -64) = r1
+186: (bf) r1 = r10
+187: (07) r1 += -64
+; bpf_trace_printk(str, sizeof(str));	
+188: (b7) r2 = 26
+189: (85) call bpf_trace_printk#6
+last_idx 189 first_idx 175
+regs=4 stack=0 before 188: (b7) r2 = 26
+; for(int i = 0; i < length_of_data; i++){
+190: (67) r7 <<= 32
+191: (bf) r1 = r7
+192: (c7) r1 s>>= 32
+193: (b7) r2 = 1
+; for(int i = 0; i < length_of_data; i++){
+194: (6d) if r2 s> r1 goto pc+20
+ R0_w=inv(id=0) R1_w=inv(id=0,umin_value=1,umax_value=2147483647,var_off=(0x0; 0xffffffff)) R2_w=inv1 R6=ctx(id=0,off=0,imm=0) R7_w=inv(id=19,smax_value=9223372032559808512,umax_value=18446744069414584320,var_off=(0x0; 0xffffffff00000000),s32_min_value=0,s32_max_value=0,u32_max_value=0) R8=inv(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=invP1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-40=??????mm fp-48_w=mmmmmmmm fp-56_w=mmmmmmmm fp-64_w=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+; 
+195: (27) r8 *= 176
+196: (0f) r6 += r8
+last_idx 196 first_idx 175
+regs=100 stack=0 before 195: (27) r8 *= 176
+regs=100 stack=0 before 194: (6d) if r2 s> r1 goto pc+20
+regs=100 stack=0 before 193: (b7) r2 = 1
+regs=100 stack=0 before 192: (c7) r1 s>>= 32
+regs=100 stack=0 before 191: (bf) r1 = r7
+regs=100 stack=0 before 190: (67) r7 <<= 32
+regs=100 stack=0 before 189: (85) call bpf_trace_printk#6
+regs=100 stack=0 before 188: (b7) r2 = 26
+regs=100 stack=0 before 187: (07) r1 += -64
+regs=100 stack=0 before 186: (bf) r1 = r10
+regs=100 stack=0 before 185: (7b) *(u64 *)(r10 -64) = r1
+regs=100 stack=0 before 183: (18) r1 = 0x2073692073696854
+regs=100 stack=0 before 182: (7b) *(u64 *)(r10 -56) = r1
+regs=100 stack=0 before 180: (18) r1 = 0x6174616420656874
+regs=100 stack=0 before 179: (7b) *(u64 *)(r10 -48) = r1
+regs=100 stack=0 before 177: (18) r1 = 0x64616f6c79617020
+regs=100 stack=0 before 176: (6b) *(u16 *)(r10 -40) = r1
+regs=100 stack=0 before 175: (b7) r1 = 10
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6_r=ctx(id=0,off=0,imm=0) R7_r=inv(id=0) R8_r=invP(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9=invP1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32=mmmm???? fp-56=???mmmmm fp-64_w=inv1 fp-80=inv1 fp-88=inv fp-96=inv
+parent didn't have regs=100 stack=0 marks
+last_idx 166 first_idx 156
+regs=100 stack=0 before 166: (05) goto pc+8
+regs=100 stack=0 before 165: (db) lock *(u64 *)(r0 +0) += r1
+regs=100 stack=0 before 164: (15) if r0 == 0x0 goto pc+2
+regs=100 stack=0 before 163: (7b) *(u64 *)(r10 -64) = r1
+regs=100 stack=0 before 162: (b7) r1 = 1
+regs=100 stack=0 before 161: (85) call bpf_map_lookup_elem#1
+regs=100 stack=0 before 159: (18) r1 = 0xffff9a7fcef7fc00
+regs=100 stack=0 before 158: (07) r2 += -28
+regs=100 stack=0 before 157: (bf) r2 = r10
+regs=100 stack=0 before 156: (15) if r9 == 0x0 goto pc+18
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6_r=ctx(id=0,off=0,imm=0) R7_r=inv(id=0) R8_r=invP(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9_r=invP1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24=mmmmmmmm fp-32_r=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80=inv1 fp-88=inv fp-96=inv
+parent didn't have regs=100 stack=0 marks
+last_idx 155 first_idx 146
+regs=100 stack=0 before 155: (db) lock *(u64 *)(r0 +0) += r1
+regs=100 stack=0 before 154: (b7) r1 = 1
+regs=100 stack=0 before 153: (15) if r0 == 0x0 goto pc+2
+regs=100 stack=0 before 152: (85) call bpf_map_lookup_elem#1
+regs=100 stack=0 before 150: (18) r1 = 0xffffb8da43389000
+regs=100 stack=0 before 149: (07) r2 += -24
+regs=100 stack=0 before 148: (bf) r2 = r10
+regs=100 stack=0 before 147: (15) if r1 == 0x0 goto pc+8
+regs=100 stack=0 before 146: (79) r1 = *(u64 *)(r10 -80)
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6_r=ctx(id=0,off=0,imm=0) R7_r=inv(id=0) R8_r=invP(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9_r=invP1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24_r=mmmmmmmm fp-32_r=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80_r=invP1 fp-88=inv fp-96=inv
+parent didn't have regs=100 stack=0 marks
+last_idx 145 first_idx 135
+regs=100 stack=0 before 145: (db) lock *(u64 *)(r0 +0) += r1
+regs=100 stack=0 before 144: (b7) r1 = 1
+regs=100 stack=0 before 143: (15) if r0 == 0x0 goto pc+2
+regs=100 stack=0 before 142: (85) call bpf_map_lookup_elem#1
+regs=100 stack=0 before 140: (18) r1 = 0xffffb8da43307000
+regs=100 stack=0 before 139: (07) r2 += -20
+regs=100 stack=0 before 138: (bf) r2 = r10
+regs=100 stack=0 before 137: (db) lock *(u64 *)(r0 +0) += r1
+regs=100 stack=0 before 136: (b7) r1 = 1
+regs=100 stack=0 before 135: (15) if r0 == 0x0 goto pc+2
+ R0_rw=map_value_or_null(id=15,off=0,ks=4,vs=8,imm=0) R6_r=ctx(id=0,off=0,imm=0) R7_r=inv(id=0) R8_r=invP(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9_r=invP1 R10=fp0 fp-8=mmmmmmmm fp-16=mmmmmmmm fp-24_r=mmmmmmmm fp-32_r=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80_r=invP1 fp-88=inv fp-96=inv
+parent didn't have regs=100 stack=0 marks
+last_idx 134 first_idx 122
+regs=100 stack=0 before 134: (85) call bpf_map_lookup_elem#1
+regs=100 stack=0 before 132: (18) r1 = 0xffff9a7efb885000
+regs=100 stack=0 before 131: (07) r2 += -16
+regs=100 stack=0 before 130: (bf) r2 = r10
+regs=100 stack=0 before 129: (db) lock *(u64 *)(r0 +0) += r1
+regs=100 stack=0 before 128: (b7) r1 = 1
+regs=100 stack=0 before 127: (15) if r0 == 0x0 goto pc+2
+regs=100 stack=0 before 126: (85) call bpf_map_lookup_elem#1
+regs=100 stack=0 before 124: (18) r1 = 0xffffb8da43285000
+regs=100 stack=0 before 123: (07) r2 += -12
+regs=100 stack=0 before 122: (bf) r2 = r10
+ R0_w=map_value(id=0,off=0,ks=4,vs=8,imm=0) R1_w=inv1 R6_r=ctx(id=0,off=0,imm=0) R7_r=inv(id=0) R8_r=invP(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9_r=invP1 R10=fp0 fp-8=mmmmmmmm fp-16_r=mmmmmmmm fp-24_r=mmmmmmmm fp-32_r=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80_r=invP1 fp-88=inv fp-96=inv
+parent didn't have regs=100 stack=0 marks
+last_idx 121 first_idx 111
+regs=100 stack=0 before 121: (db) lock *(u64 *)(r0 +0) += r1
+regs=100 stack=0 before 120: (b7) r1 = 1
+regs=100 stack=0 before 119: (15) if r0 == 0x0 goto pc+2
+regs=100 stack=0 before 118: (85) call bpf_map_lookup_elem#1
+regs=100 stack=0 before 116: (18) r1 = 0xffffb8da4319d000
+regs=100 stack=0 before 115: (07) r2 += -8
+regs=100 stack=0 before 114: (bf) r2 = r10
+regs=100 stack=0 before 113: (db) lock *(u64 *)(r0 +0) += r1
+regs=100 stack=0 before 112: (b7) r1 = 1
+regs=100 stack=0 before 111: (15) if r0 == 0x0 goto pc+2
+ R0_rw=map_value_or_null(id=12,off=0,ks=4,vs=8,imm=0) R6_r=ctx(id=0,off=0,imm=0) R7_rw=inv(id=0) R8_rw=invP(id=10,umin_value=30,umax_value=150,var_off=(0x2; 0xfc)) R9_rw=invP1 R10=fp0 fp-8_r=mmmmmmmm fp-16_r=mmmmmmmm fp-24_r=mmmmmmmm fp-32_r=mmmm???? fp-56=???mmmmm fp-64=mmmmmmmm fp-80_r=invP1 fp-88=inv fp-96=inv
+parent didn't have regs=100 stack=0 marks
+last_idx 110 first_idx 87
+regs=100 stack=0 before 110: (85) call bpf_map_lookup_elem#1
+regs=100 stack=0 before 108: (18) r1 = 0xffff9a7efb886000
+regs=100 stack=0 before 107: (07) r2 += -4
+regs=100 stack=0 before 106: (bf) r2 = r10
+regs=100 stack=0 before 105: (bf) r8 = r2
+regs=4 stack=0 before 104: (bf) r9 = r3
+regs=4 stack=0 before 103: (55) if r1 != 0x4 goto pc+119
+regs=4 stack=0 before 102: (61) r1 = *(u32 *)(r6 +4)
+regs=4 stack=0 before 101: (bf) r2 = r9
+regs=200 stack=0 before 100: (63) *(u32 *)(r10 -28) = r0
+regs=200 stack=0 before 99: (b7) r3 = 1
+regs=200 stack=0 before 98: (40) r0 = *(u32 *)skb[r8 + 0]
+regs=200 stack=0 before 97: (0f) r8 += r1
+regs=200 stack=0 before 96: (79) r1 = *(u64 *)(r10 -96)
+regs=200 stack=0 before 95: (1f) r7 -= r8
+regs=200 stack=0 before 94: (0f) r9 += r1
+regs=202 stack=0 before 93: (79) r1 = *(u64 *)(r10 -88)
+regs=200 stack=400 before 92: (bf) r9 = r8
+regs=100 stack=400 before 91: (57) r8 &= 60
+regs=100 stack=400 before 90: (77) r8 >>= 2
+regs=100 stack=400 before 89: (bf) r8 = r0
+regs=1 stack=400 before 88: (50) r0 = *(u8 *)skb[r8 + 0]
+; for(int i = 0; i < length_of_data; i++){
+197: (77) r7 >>= 32
+198: (b7) r8 = 2122533
+199: (05) goto pc+3
+; int a_int = *(a+i);
+203: (71) r1 = *(u8 *)(r6 +0)
+variable ctx access var_off=(0x20; 0x7fc0) disallowed
+processed 180 insns (limit 1000000) max_states_per_insn 0 total_states 10 peak_states 10 mark_read 9
+
+libbpf: -- END LOG --
+libbpf: failed to load program 'socket1'
+libbpf: failed to load object './sockex1_kern.o'
+
