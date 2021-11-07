@@ -1,0 +1,39 @@
+The verifier issued an error due to line 67 where there is a call to bpf_lookup_elem. 
+The exact error stated was: invalid indirect read from stack R2 off -24+0 size 4.
+
+Going to the disassembly around line 67:
+      63:       bf a2 00 00 00 00 00 00 r2 = r10
+      64:       07 02 00 00 e8 ff ff ff r2 += -24
+      65:       18 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 r1 = 0 ll
+      67:       85 00 00 00 01 00 00 00 call 1
+
+
+Checking the previous lines to see where a value was being stored in r10-24:
+
+      13:       28 00 00 00 10 00 00 00 r0 = *(u16 *)skb[16]
+      14:       63 0a ec ff 00 00 00 00 *(u32 *)(r10 - 20) = r0
+      15:       55 08 05 00 01 00 00 00 if r8 != 1 goto +5 <LBB0_2>
+      16:       67 07 00 00 02 00 00 00 r7 <<= 2
+      17:       57 07 00 00 3c 00 00 00 r7 &= 60
+      18:       07 07 00 00 16 00 00 00 r7 += 22
+      19:       50 70 00 00 00 00 00 00 r0 = *(u8 *)skb[r7]
+      20:       63 0a e8 ff 00 00 00 00 *(u32 *)(r10 - 24) = r0
+
+00000000000000a8 LBB0_2:
+      21:       61 61 04 00 00 00 00 00 r1 = *(u32 *)(r6 + 4)
+      
+
+In line 15, there is a goto statement before which the location r10-4, r10-8, r10-16, and r10-20 were initialized. Although r10-24 has been initialized in line 20, it hasn't been before the goto statement. So, there is a chance that r10-24 remains uninitialized before reaching line 67. 
+
+In the initial sockex1_kern.c index6 has not been initialized anywhere except inside the if condition. So, there is a possibility that if the 'if condition' fails, index 6 will remain uninitialized before the call to bpf_lookup_elem.
+
+int index6;
+long * value6;
+if(index == IPPROTO_ICMP){
+
+	index6 = load_byte(skb, ETH_HLEN+ihl_bytes+8);
+
+}
+
+After changing the declaration of index6 to the initialization 'index6 = 0' the verifier accepts the program.
+
