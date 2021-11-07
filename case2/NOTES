@@ -131,11 +131,7 @@ An error occured while trying to deference a pointer to some location in the pac
 
 However, attaching this bpf program type to a socket seemed complex so I went back to version 2 code.
 
-
-
-
-
-So, for now I am able to print the first 10 bytes of data in hexadecimal form. 10 is just a constant I used instead of looping through the entire length of data. Because, when I am looping through the entire length, I am getting a verifier error message. This is even when I include a check that the offset I am accessing is within skb->len. The error message looks like this: 'The sequence of 8193 jumps is too complex.' I'll try looking into this more and give updates! 
+ 
 
         
         

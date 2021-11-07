@@ -1,0 +1,9 @@
+So, bounding is basically this check (to make sure loop variable does not exceed some constant maximum value).
+To loop through all the data in a packet, the best way would be to write a loop but make sure loop variable does not exceed some maximum packet size.
+
+strace_result caused due to sockex1_kern_before.c. The same type of strace_result was caused for sockex1_kern_intermediate.c.
+
+sockex1_kern_after.c, bytecode_after.c are the working code results.
+
+
+

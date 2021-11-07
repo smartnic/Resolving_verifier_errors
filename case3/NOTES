@@ -41,5 +41,17 @@ length_of_data &= 31; //length_of_data has only the lower 5 bits set
 We are hoping that the verifier might be okay with this since a lower number of set bits corresponds to a smaller range (in this case 0-2^(5)-1 = 0-31) 
 
 
+Next attempt:version 4
+In folder for case5, the loop works when there is a bound check of the loop variable inside the loop. 
+Passes the verifier test.
+
+In this case I do a bound check on i for 8000 and it works. If I do a bound check for 65000 instead, again it gives the verifier error,
+'The sequence of 8193 jumps is too complex'. So, not only the way the bounds are checked should be done in a particular way, but the actual constant maximum value shouls not be too high.
+
+Works: 8100, 8150
+Doesen't work: 8192, 8190, 8180
+
+8150 works but as we go higher it may not work cause including all the previous instructions plus these 8... iterations may lead to more than 8193 jumps.
+
 
 
