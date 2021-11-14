@@ -5,5 +5,74 @@ strace_result caused due to sockex1_kern_before.c. The same type of strace_resul
 
 sockex1_kern_after.c, bytecode_after.c are the working code results.
 
+The following bounds work: 2000, 8180, 8190, 8192, 8193, 8200, 10000
+
+Analysis of byte_code_intermediate.txt (bounding before loop):
+
+	0:	bf 16 00 00 00 00 00 00	r6 = r1    //r6 is the skb
+       1:	61 67 00 00 00 00 00 00	r7 = *(u32 *)(r6 + 0) //r7 stores skb->len
+       2:	bf 71 00 00 00 00 00 00	r1 = r7 //r1 stores skb->len
+       3:	07 01 00 00 ff ff ff ff	r1 += -1 
+       4:	67 01 00 00 20 00 00 00	r1 <<= 32   //4, 5: Bit shifting to make first 32 bits of r1 0. Anyways skb->len info is in the lower 32 bits.
+       5:	77 01 00 00 20 00 00 00	r1 >>= 32
+       6:	25 01 0d 00 cf 07 00 00	if r1 > 1999 goto +13 <LBB0_3> //Making sure r1 is within bounds else exiting
+       7:	b7 08 00 00 00 00 00 00	r8 = 0
+       8:	b7 09 00 00 25 78 20 00	r9 = 2127909
+       
+       
+       At the end of loop iteration:
+       
+      18:	07 08 00 00 01 00 00 00	r8 += 1  //Incrementing loop variable r8
+      19:	2d 87 f5 ff 00 00 00 00	if r7 > r8 goto -11 <LBB0_2>  //We are checking r8 is less than r7
+      
+Problem: At line 8 we know that r1 is within bounds, but after each iteration when determining if the next byte is within bounds we check r8 with r7. The verifier does not know that r7 is also withing bounds at this point. It just knows that at the beginning of line 8, r1 is within bounds.
+
+However, semantically both the after bpf c code and intermediate are correct.
+
+Solution Ideas:
+Modifying any one of:
+1)Souce Code [sockex1_kern_after.c]
+2)Bytecode
+There are tools to modify bytecode. 
+Since R1 is a parameter variable and gets changed often, maybe we can try just try to change the checks in lines 3, 4, 5, and 6 so that we replace r1 with r7 and leave the rest of the bytecode as it is. Checking if this new bytecode passes verifier could be helpful. 
+3)Clang [So, that it could produce a better bytecode]
+4)Verifier [So, that it could have inferred the properties of r7 based on the check to R1]
+
+
+Analysis of byte_code_after.txt (bounding within loop):
+
+0000000000000000 bpf_prog1:
+       0:	bf 16 00 00 00 00 00 00	r6 = r1
+       1:	61 61 00 00 00 00 00 00	r1 = *(u32 *)(r6 + 0)
+       2:	15 01 0f 00 00 00 00 00	if r1 == 0 goto +15 <LBB0_4>
+       3:	b7 07 00 00 00 00 00 00	r7 = 0
+       4:	b7 08 00 00 25 78 20 00	r8 = 2127909
+
+0000000000000028 LBB0_2:
+       5:	50 70 00 00 00 00 00 00	r0 = *(u8 *)skb[r7] //grabbing character at offset r7
+       6:	63 8a fc ff 00 00 00 00	*(u32 *)(r10 - 4) = r8 //r10-4 stores a pointer to the string "%x "
+       7:	67 00 00 00 38 00 00 00	r0 <<= 56
+       8:	c7 00 00 00 38 00 00 00	r0 s>>= 56
+       9:	bf a1 00 00 00 00 00 00	r1 = r10
+      10:	07 01 00 00 fc ff ff ff	r1 += -4 //r1 stores the stack location r10-4
+      11:	b7 02 00 00 04 00 00 00	r2 = 4 //Size of string/data
+      12:	bf 03 00 00 00 00 00 00	r3 = r0 //Holds the character at offset r7
+      13:	85 00 00 00 06 00 00 00	call 6
+      14:	25 07 03 00 cf 07 00 00	if r7 > 1999 goto +3 <LBB0_4> //checking offset within bounds
+      15:	07 07 00 00 01 00 00 00	r7 += 1 //adding one to offset 
+      16:	61 61 00 00 00 00 00 00	r1 = *(u32 *)(r6 + 0) //At this point we know r7 <= 2000. r1 is set to skb->len
+      17:	2d 71 f3 ff 00 00 00 00	if r1 > r7 goto -13 <LBB0_2> //Making sure r7 < skb->len
+
+0000000000000090 LBB0_4:
+      18:	b7 00 00 00 00 00 00 00	r0 = 0
+      19:	95 00 00 00 00 00 00 00	exit
+
+
+call 6: call bpf_trace_printk(data, sizeof(data), a);
+
+
+In this case we check the exact 'i' (r7) before the next iteration to make sure it is within bounds. Previously r7 was 'i' but we just checked r1 initially. Now 'r7' is 'i' and the variable we are checking.
+
+
 
 

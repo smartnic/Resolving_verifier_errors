@@ -46,7 +46,7 @@ In folder for case5, the loop works when there is a bound check of the loop vari
 Passes the verifier test.
 
 In this case I do a bound check on i for 8000 and it works. If I do a bound check for 65000 instead, again it gives the verifier error,
-'The sequence of 8193 jumps is too complex'. So, not only the way the bounds are checked should be done in a particular way, but the actual constant maximum value shouls not be too high.
+'The sequence of 8193 jumps is too complex'. So, not only the way the bounds are checked should be done in a particular way, but the actual constant maximum value should not be too high.
 
 Works: 8100, 8150
 Doesen't work: 8192, 8190, 8180

@@ -1,5 +1,4 @@
 Started off with version 1 which was giving the error trace.
-
         
 struct __sk_buff {
 	__u32 len;
@@ -52,11 +51,6 @@ Low address
 	skb->data_end (This is unaccessible)
 
 High address
-
-
-
-
-
 
 
 

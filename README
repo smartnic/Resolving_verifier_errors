@@ -1,0 +1,80 @@
+CASE 1 FOLDER
+
+Error: 'invalid indirect read from stack R2 off -24+0 size 4'. 
+
+The main understanding in fixing this error is that we need to make sure that no matter which path of code/branches we follow, by 	the time we need to read off of a location on the BPF stack, it has to be initialized (some value should have been put to that 		stack location). An example of this idea (as shown in case 1) is that when a call to a function is made as seen in the bytecode, 		the lines before normally indicate how the registers R1 to R2 are being filled to hold the parameters to the function. In this case the function is bpf_lookup_elem and R2 holds the location on the stack where the key to the bpf map is stored. Since, bpf_lookup_elem reads the value of the key, the location on the stack should be initialized by this point. The before ad after bytecodes show that how if we initialize the value of the key in the c code by "index6 = 0" then no matter what path/branches the code takes, the corresponding location on the stack is always initialized.
+
+So, initializing certain parameters (in the c code) which will be stored on the location R10-X, can help with errors like 'invalid indirect read from stack R2 off -X+0 size 4'.
+
+The exact description of the thought process and analysis of the bytecode is mentioned in 'NOTES' in the folder.
+
+
+CASE 2 FOLDER
+
+Goal: to try and print the entire data (after the headers) of a packet.
+
+This problem is actually solved in a later folder, however this folder describes certain initial attempts to accomplish the goal and what has been learned in general about BPF programming through these attempts.
+
+The 'NOTES' in Case 2 folder describes information about what has been learned of the skb structure, how the packet is stored in memory, the skb->data & skb->data_end fields, boundary checks, some idea about how load_byte works, the descriptions of the 3 attempts, a list of links used to gain all this understanding.
+
+Summary of what was learned from the three attempts:
+
+1) After version1, the error received: 'variable ctx access var_off=(0x20; 0x7fc0) disallowed'. Ideas learned: a)The operation load_byte (skb, offset) is not equivalent to loading a byte from location 'skb + offset'. b) 'skb->data' is what points to the start of packet headers and data, not 'skb'. 
+
+2) In version 2, I retried using skb->data and reading a single byte from 'skb->data + offset_of_data (variable I used that stores the location actaul data is present after all the headers)' after ensuring this location is before 'skb->data_end'. 
+Error: invalid bpf_context access off=76 size=4
+Learned: The bpf program type 'BPF_PROG_TYPE_SOCKET_FILTER' does not support direct packet access through skb.
+But 'BPF_PROG_TYPE_SK_SKB' does. There are different kinds of bpf programs and some have certain feautures others don't and therefore some are comparitively more suitable for certain applications. Each BPF program needs ti be attached in  a specific way.
+
+3)Version 3: Tried changing bpf program type however I discarded this attempt soon due to complexity in changing the way the bpf program needs to be attached to a point in the OS. However, some intersting observations in loading this program type:
+
+a) Error: BPF_LD_[ABS|IND] instructions not allowed for this program type
+Fix/Understanding: Instructions like load_bytes are not allowed.
+
+b) Error: 'invalid access to packet, off=23 size=1, R2(id=0,off=23,r=0)'
+Fix/Understanding: when accessing a location using direct pointer access '(skb->data + offset)', make a check that this address is less than skb->data_end.
+
+
+CASE 3 FOLDER:
+
+Goal: Same as in case 2 (To print all data). This time we are just using a for loop to go from load_byte(skb, offset_of_data) to load_byte(skb, offset_of_data + length_of_data - 1), and we are trying to bound the loop variable 'length_of_data' by some constant.
+
+Main Error in first 3 versions: "The sequence of 8193 jumps is too complex."
+
+Different methods are tried to do this bounding (v2: by making sure length_of_data is less than a certain value before the loop, v3: bounding the number of bits of length_of_data), but finally v4 works. To deeply analyze why v4 works as compared to previous attempts, case5 folder will be useful.
+
+Exact analysis of bytecode and thought process through various attempts are given in the 'NOTES' of this folder.
+
+Final Conclusion: So, the way the bounds are checked should be done in a particular way and the actual constant maximum value should not be too high.
+
+
+CASE 4 FOLDER:
+
+Describes how load_byte inherently checks to may sure that a certain offset (known to be with some constant) is within the bounds of the packet. Link for this property: https://lwn.net/Articles/686677/
+
+CASE 5 FOLDER:
+
+Goal: iterating through all packet info (headers and data) safely. The bpf program used was just like a simple loop so that interpreting bytecode can be easier.
+
+Error: The load to a long time (multiple load attempts) and the verifier error trace was very huge, giving a final error: 'BPF program is too large. Processed 1000001 insn
+processed 1000001 insns (limit 1000000)'.
+
+Understanding: So, the way in which bounds are checked matters because of how the final bytecode looks like. Analysis of difference between bytecode of checking bounds before vs within loop & some tested upperbounds that do work are mentioned in 'NOTES' of this folder.
+
+Something interesting: Upperbounds above 8193, like 10000 and 65000 are also passing the verifier.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
