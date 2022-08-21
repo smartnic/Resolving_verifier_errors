@@ -75,4 +75,23 @@ In this case we check the exact 'i' (r7) before the next iteration to make sure 
 
 
 
+Sockex1_kern_other_attempt.c
+This gives the same error:
+BPF program is too large. Processed 1000001 insn
+processed 1000001 insns (limit 1000000) max_states_per_insn 4 total_states 9618 peak_states 9618 mark_read 1.
+Skb->len read from stack into a register.
+
+From the location ‘r6+0’ skb->len is read into register r1.
+Then the property of being less than 2000 is inferred about r1 but not the value at the location ‘r6+0.’
+Later, before checking the loop condition, the value at r6+0 is read again into r1 and the previous inference about r1 is not valid anymore.
+
+sockex1_kern_other_attempt2.c
+Gives same error
+Reasoning:
+Call 6 does not change r7.
+The reason why this is unsafe is because clang produced r7!=r8 instead of r7>r8.
+
+
+
+
 
