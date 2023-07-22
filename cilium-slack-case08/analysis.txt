@@ -1,0 +1,63 @@
+https://cilium.slack.com/archives/C4XCTGYEM/p1681805261706219
+
+Ritik Jain posted on April 18th
+
+struct bpf_spin_lock {
+	__u32 val;
+};
+struct vaccant_port {
+	u32 port;
+	struct bpf_spin_lock lock;
+};
+struct bpf_map_def SEC("maps") vaccant_ports = {
+	.type       = BPF_MAP_TYPE_ARRAY,
+	.key_size   = sizeof(u32),
+	.value_size = sizeof(struct vaccant_port),
+	.max_entries = 50,
+};
+SEC("cgroup/connect4")
+int k_connect4(struct bpf_sock_addr *ctx) {
+    const u32 index            = (u32)0;
+	struct vaccant_port *value = bpf_map_lookup_elem(&vaccant_ports, &index);
+
+	if (value) {
+		bpf_printk("vaccant proxy at port:%u\n", value->port);
+		bpf_spin_lock(&value->lock);
+		value->port = 0;
+		bpf_spin_unlock(&value->lock);
+    }
+}
+
+
+This is the verifier error:
+
+loading objects: field K_connect4: program k_connect4: load program: permission denied: map 'vaccant_ports' has to have BTF in order to use bpf_spin_lock (56 line(s) omitted)
+exit status 1
+
+
+It was important to get symbols compiled
+into the object file, using clang
+-g. This is required for BTF to work.
+
+Second, the map had to be defined "BTF
+style" -- that is,
+
+from
+
+struct vaccant_port {
+	u32 port;
+	struct bpf_spin_lock lock;
+};
+
+to
+
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __type(key, u32);
+    __type(value, struct vaccant_port);
+    __uint(max_entries, 50);
+} vaccant_ports SEC(".maps");
+
+Unless the map is defined in a precise
+way, it won't be able to generate BTF
+even when clang compiled with -g.
