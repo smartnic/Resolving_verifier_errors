@@ -1,0 +1,158 @@
+https://cilium.slack.com/archives/C4XCTGYEM/p1680615332045089
+
+Tiny Grape wants to use an XDP program
+to append new data at the end of ICMP
+payload.
+
+static __always_inline __u16 csum_fold_helper(__u32 csum)
+{
+  return ~((csum & 0xffff) + (csum >> 16));
+}
+ 
+static __always_inline void ipv4_csum(void *data_start, int data_size,
+              __u32 *csum)
+{
+  *csum = bpf_csum_diff(0, 0, data_start, data_size, *csum);
+  *csum = csum_fold_helper(*csum);
+}
+
+int xdp_process(struct xdp_md* ctx) {
+    //Extend the packet length(Success)
+    if( bpf_xdp_adjust_tail(ctx,token_len) < 0 ) {
+      bpf_printk("Adjust failed");
+      return XDP_PASS;
+    }
+
+    void* data = (void*)(long)(ctx->data);
+    void* data_end = (void*)(long)(ctx->data_end);
+ 
+    __u64 l3_off = sizeof(struct ethhdr);           
+    __u64 l4_off = l3_off + sizeof(struct iphdr);  
+    __u64 l7_icmp_off = l4_off + sizeof(struct icmphdr); 
+
+    struct ethhdr* eth = data;
+    if ((void*)(eth + 1) > data_end) {
+        return XDP_DROP;
+    }
+    struct iphdr   *ip   = data + l3_off;
+    if ((void*)(ip + 1) > data_end) {
+        return XDP_DROP;
+    }
+    struct icmphdr *icmp = data + l4_off;
+    if ((void*)(icmp + 1) > data_end) {
+        return XDP_DROP;
+    }
+    if( ip->protocol == IPPROTO_ICMP ) {
+       
+        ip->tot_len = htons(ntohs(ip->tot_len) + token_len);//Update the ip->tot_len(Success) 
+        __u32 csum = 0;
+        ip->check = 0;
+        ipv4_csum(ip, sizeof(struct iphdr), &csum);//Update the IP-Header's checksum(Success)
+        ip->check = csum;
+
+        csum = 0;               
+        icmp->checksum = 0;  
+        int payload_len = data_end - (void *)(icmp + 1); 
+        ipv4_csum(icmp, payload_len, &csum);//Update the ICMP Checksum(Failed)
+        icmp->checksum = csum; 
+
+        return XDP_PASS;
+    }
+    return XDP_PASS;
+}
+
+
+
+; *csum = bpf_csum_diff(0, 0, data_start, data_size, *csum);
+109: (b7) r1 = 0                      ; R1_w=0
+110: (b7) r2 = 0                      ; R2_w=0
+111: (bf) r3 = r7                     ; R3_w=pkt(off=34,r=42,imm=0) R7=pkt(off=34,r=42,imm=0)
+112: (b7) r5 = 0                      ; R5_w=0
+113: (85) call bpf_csum_diff#28
+R4 min value is negative, either use unsigned or 'var &= const'
+processed 112 insns (limit 1000000) max_states_per_insn 0 total_states 6 peak_states 6 mark_read 2
+
+libbpf: -- END LOG --
+libbpf: failed to load program 'xdp_process'
+libbpf: failed to load object 'xdp_test.o'
+
+
+
+changing to unsigned int is not good
+neough: (follow up):
+
+//......
+static __always_inline void ipv4_csum(void *data_start, unsigned int data_size,
+              __u32 *csum)
+{   
+  *csum = bpf_csum_diff(0, 0, data_start, data_size, *csum);
+  *csum = csum_fold_helper(*csum);
+} 
+//......
+unsigned int payload_len = data_end - (void *)(icmp + 1);
+ipv4_csum(icmp, payload_len, &csum);
+//......
+
+
+same issue with verifier:
+
+; *csum = bpf_csum_diff(0, 0, data_start, data_size, *csum);
+109: (b7) r1 = 0                      ; R1_w=0
+110: (b7) r2 = 0                      ; R2_w=0
+111: (bf) r3 = r8                     ; R3_w=pkt(off=34,r=42,imm=0) R8=pkt(off=34,r=42,imm=0)
+112: (bf) r4 = r7                     ; R4_w=scalar(id=5) R7_w=scalar(id=5)
+113: (b7) r5 = 0                      ; R5_w=0
+114: (85) call bpf_csum_diff#28
+R4 min value is negative, either use unsigned or 'var &= const'
+processed 113 insns (limit 1000000) max_states_per_insn 0 total_states 6 peak_states 6 mark_read 2 
+
+
+so the idea is to go with second
+suggestion, var &= const, to enforce
+some sort of bound? -- suggestion from
+dylan reimerink
+
+
+static __always_inline void ipv4_csum(void *data_start, unsigned int data_size,
+              __u32 *csum)
+{   
+  *csum = bpf_csum_diff(0, 0, data_start, data_size & 0xFFFF, *csum);
+  *csum = csum_fold_helper(*csum);
+} 
+
+
+a new fault after making this change:
+
+128: (85) call bpf_csum_diff#28
+invalid access to packet, off=34 size=65535, R3(id=0,off=34,r=42)
+R3 offset is outside of the packet
+processed 125 insns (limit 1000000) max_states_per_insn 0 total_states 6 peak_states 6 mark_read 2
+
+
+--> means that the offset is now outside
+    of the packet.
+
+---- new questions related:
+
+unsigned payload_len = 74;
+ipv4_csum(icmp_hdr, payload_len,
+&csum);//The operate is right,new
+checksum will update
+
+but
+
+unsigned int payload_len = htons(iph->tot_len) - sizeof(struct iphdr);//The result is 74 too
+ipv4_csum(icmp_hdr, payload_len, &csum);
+
+won't work!  first one is a const and
+second is a variable (and verifier
+clearly didn't do a great job
+determining this bound).
+
+solution according to OP (Tiny grape) is
+"""
+ I only calculated the Checksum for the added Payload data,not the whole data.
+Then calculate the sum of the original
+checksum and Payload's checksum as the
+new checksum
+"""
