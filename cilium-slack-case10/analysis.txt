@@ -1,0 +1,93 @@
+(10)
+
+https://cilium.slack.com/archives/C4XCTGYEM/p1681995665155079
+
+A series of issues on this one.
+
+posted by Gaurav Kumar on April 20th
+
+SEC("kprobe/sys_read")
+int syscall__probe_entry_read(struct pt_regs *ctx) {
+	u64 id  = bpf_get_current_pid_tgid();
+	u32 pid = id >> 32;
+	if (pid != A_PID)
+		return 0;
+	bpf_printk("read entry called for [PID:%lu]\n", pid);
+
+	// Stash arguments
+	struct data_args_t read_args = {};
+	char *buf;
+
+	bpf_probe_read(&buf, sizeof(buf), &(PT_REGS_PARM2(ctx)));
+
+	bpf_printk("Buffer of read entry system call:%s", buf);
+
+	read_args.fd  = (PT_REGS_PARM1(ctx));
+	read_args.buf = buf;
+
+	bpf_map_update_elem(&active_read_args_map, &id, &read_args, BPF_ANY);
+	return 0;
+}
+
+
+this returned an empty buffer in
+read_args.buf.
+
+(1) apparently, you need to use
+kretprobe (not kprobe) to get the value
+populated in there after the system
+call.
+
+(2) bpf_probe_read requires a buffer
+argument to copy things into. This must
+be set up correctly.
+
+bpf_probe_read(&buf, sizeof(buf),
+read_args->buf);
+
+will return an empty buffer
+
+whereas
+
+bpf_probe_read(buf, sizeof(buf), read_args->buf);
+
+returns a verifier error.
+
+Loading Objects: field SyscallProbeRetRead: program syscall__probe_ret_read: load program: permission denied: 35: (85) call bpf_probe_read#4: R1 type=scalar expected=fp, pkt, pkt_meta, map_key, map_value, mem, alloc_mem, buf (45 line(s) omitted)2023/04/21 17:28:46 invalid program: bad file descriptor
+
+even after pre-allocating buf (char
+buf[128] = {0}), there is still trouble.
+
+(3) The arguments must be read in
+correctly. depending on kernel config,
+there may be different wrappers to use
+to make this happen correctly.
+
+One suggestion was to use
+PT_REGS_PARM1(), PT_REGS_PARM2(),
+etc. as a pt_regs structure, and only
+then access each parameter.
+
+So appaently it was fixed by using a
+different set of macros
+PT_REGS_PARM1_CORE(ctx) (append _CORE)
+over a new_ctx that was assigned to a
+new struct variable. The buffers must be
+read using new_ctx.
+
+WHAAAAT?
+
+* the key issues:
+
+  (1) API differences based on kernel
+  configurations
+  (2) run-time "error" in the sense that
+  we were expecting a different output
+  but got something else
+  (3) kretprobe instead of kprobe
+  (4) helper API restrictions (buf must
+  be available, pre-allocated, char**
+  rather than just char*, etc.)
+  -> shown up as a verifier error rather
+  than a type error, during, say
+  compilation.
