@@ -1,0 +1,30 @@
+(11)
+
+https://cilium.slack.com/archives/C4XCTGYEM/p1682436327067409
+
+Qiongwen Xu posted this on April 25th
+
+data structure of a cuckoo hash key:
+
+struct token_elem {
+  u32 num;        /* number of tokens */
+  u64 last_time;  /* flow's last arriving time */
+  struct bpf_spin_lock lock;
+} __attribute__((packed));
+
+This is the verifier error:
+
+; bpf_spin_lock(&token->lock);
+200: (85) call bpf_spin_lock#93
+R1 doesn't have constant offset. bpf_spin_lock has to be at the constant offset
+
+and the reason it can't do this is
+because there can only be one spin_lock
+per map element. But this is specified
+as "not at constant offset"
+
+** issues: api specification
+  -- actually a type error, 
+** but stated weirdly as a verification
+error, in language that is hard to
+understand.
