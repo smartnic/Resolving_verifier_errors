@@ -1,0 +1,128 @@
+https://cilium.slack.com/archives/C4XCTGYEM/p1682687502694269
+
+Gaurav Kumar posted on April 28th
+
+struct socket_data_event_t
+{
+    struct attr_t
+    {
+        u64 timestamp_ns;
+
+        enum traffic_direction_t direction;
+
+        u32 msg_size;
+
+    } attr;
+    char msg[MAX_MSG_SIZE + 1]; // MAX_MSG_SIZE = 30720
+};
+
+static __inline void perf_submit_buf(struct pt_regs *ctx, const enum traffic_direction_t direction, const char *buf, u64 buf_size, size_t offset, struct conn_info_t *conn_info, struct socket_data_event_t *event)
+{
+
+    switch (direction)
+    {
+    case kEgress:
+        event->attr.pos = conn_info->wr_bytes + offset;
+        break;
+    case kIngress:
+        event->attr.pos = conn_info->rd_bytes + offset;
+        break;
+    }
+
+    bpf_printk("Before asm operation perf_submit_buf...[buf_size:%d]", buf_size);
+    asm volatile("%[buf_size] &= 0x7800;\n" ::[buf_size] "+r"(buf_size)
+                 :);
+    bpf_printk("After asm operation perf_submit_buf...[buf_size:%d]", buf_size);
+
+    bpf_probe_read(&event->msg, buf_size & 0x7800, buf);
+    
+    
+    if (buf_size > 0)
+    {
+        event->attr.msg_size = buf_size;
+    
+        bpf_printk("[%llu]Size of data event attr: %d", bpf_ktime_get_ns(), sizeof(event->attr));
+        bpf_printk("[%llu]Buffer size:%llu", bpf_ktime_get_ns(), buf_size);
+    
+        u64 size = sizeof(event->attr) + buf_size;
+        bpf_printk("[%llu]Event Size:%llu", bpf_ktime_get_ns(), size);
+    
+        bpf_perf_event_output(ctx, &socket_data_events, BPF_F_CURRENT_CPU, event, size);
+    }
+}
+
+A runtime issue occurs that code where
+if(buf_size > 0) still executes even
+when after the asm, the buf_size is
+indeed 0. Apparently the asm didn't do
+its job well. But it had to be a power
+of 2 to begin with, since the array
+itself (the event->msg) has the
+MAX_MSG_SIZE which is 30720.
+
+someone had to put in ASM code to ensure
+that code doesn't get moved around
+(apparently clang is bad about this).
+
+https://github.com/cilium/tetragon/blob/966b30173222e4b92a748c3f4344e52c89b51a90/bpf/process/bpf_generic_retkprobe.c#L127
+
+The above code in fact does an entire
+branch in assembly to ensure that such
+branch checks are kept by the compiler
+and the verifier.
+
+Presumably required here too:
+
+https://github.com/apache/skywalking-rover/blob/c0cf80d5ed01ffa4117cebedb082bfeadcec5b57/bpf/profiling/network/netmonitor.c#L278
+
+asm() is not really required for
+functionality, but required to ensure
+clang doesn't move things around and
+make the verifier unhappy.
+
+Especially before bpf_probe_read and
+bpf_perf_event_output, and all that,
+such size restrictions are somehow
+enforced. 
+
+The interesting thing is that the &=
+constant (to round down to some number
+of significnt bits) must be used both to
+set the value of the regstier, and also
+then to read it later through one of the
+parameters to the function. This totally
+makes no sense to me :(
+
+*** i'm not so sure i buy what these
+    tricks are doing. ASM to force clang
+    to do something seems really
+    strange, and ideally should not be
+    done because the compiler will move
+    things around and make them
+    semantically inequivalent (at least,
+    according to the verifier)
+
+As in something like this:
+
+asm volatile("%[buf_size] &= 0x7fff;\n" ::[buf_size] "+r"(buf_size)
+                 :);
+    bpf_probe_read(&event->msg, buf_size
+                 & 0x7fff, buf);
+
+use the & 0x7ff in both places (but
+WHY?!)
+
+*** so, this falls into a class of NOT
+    verifier errors, but some things
+    that devs had to do to ensure that
+    the compiler won't move things
+    around.
+
+*** but also, the reason compiler moving
+    things hurts is because it will
+    cause the program to be rejected
+    otherwise.
+
+It will need to be seen what the
+bytecode actually looks like to know why
+this causes a verifier rejection.
