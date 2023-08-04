@@ -1,0 +1,129 @@
+(7)
+
+https://cilium.slack.com/archives/C4XCTGYEM/p1681723004202059
+
+Kuroame posted this on April 17th
+
+// meta.l4_off is __u16
+struct tcphdr *tcph = data + meta.l4_off;
+
+if ((void *)tcph + sizeof(struct tcphdr) > (void *)MAX_PACKET_OFF) {
+  return XDP_DROP;
+}
+
+if ((void *)tcph + sizeof(struct tcphdr) > data_end) {
+  return XDP_DROP;
+}
+
+ret = tcph->dest;
+
+the error:
+
+invalid access to packet, off=12 size=2, R1(id=18,off=12,r=0)
+	R1 offset is outside of the packet
+
+relatively full verifier log:
+
+; if ((void *)tcph + sizeof(struct tcphdr) > data_end) {
+	126: (bf) r1 = r5
+	127: (07) r1 += 20
+	; if ((void *)tcph + sizeof(struct tcphdr) > data_end) {
+	128: (3d) if r2 >= r1 goto pc+86
+
+	from 128 to 215: R0=map_value(id=0,off=0,ks=4,vs=376,imm=0) R1_w=pkt(id=18,off=20,r=0,umax_value=4294967295,var_off=(0x0; 0xffffffff)) R2_w=pkt_end(id=0,off=0,imm=0) R3_w=invP(id=0,umax_value=4294967295,var_off=(0x0; 0xffffffff)) R5_w=pkt(id=18,off=0,r=0,umax_value=4294967295,var_off=(0x0; 0xffffffff)) R6=ctx(id=0,off=0,imm=0) R7=map_value(id=0,off=0,ks=4,vs=376,imm=0) R8_w=pkt(id=0,off=0,r=54,imm=0) R10=fp0 fp-104=0000mmmm
+
+Apparently this modified version works
+(kuroame), but it is unclear why
+
+struct tcphdr *tcph = data + meta.l4_off;
+
+if (meta.l4_off + sizeof(struct tcphdr) > MAX_PACKET_OFF) {
+  return XDP_DROP;
+}
+
+if ((void *)tcph + sizeof(struct tcphdr) > data_end) {
+  return XDP_DROP;
+}
+
+  ret = tcph->dest;
+
+Q: why wouldn't even just the second
+check actually work?
+
+A very related,
+extremely-insightfully-answered  stack
+overflow question and response are here:
+
+https://stackoverflow.com/questions/70729664/need-help-in-xdp-program-failing-to-load-with-error-r7-offset-is-outside-of-the/70731589#70731589
+
+in this stack overflw post, the code
+provided by OP is
+
+if (nh->pos + size < data_end)
+      nh->pos += size;
+    else
+      return INV_RET_U32;
+
+but the code which apparently fixes it,
+after "teaching" the verifier that it is
+OK to access (working around a corner
+case of handling overflows in what is
+considered the maximum packet offset),
+is
+
+#define MAX_PACKET_OFF 0xffff
+// same definition above as kernel
+// verifier.c
+// ie: no packet can be larger than 65K
+// bytes large.
+...
+nh->pos += size;
+if (nh->pos > MAX_PACKET_OFF)
+     return INV_RET_U32;
+if (nh->pos >= data_end)
+    return INV_RET_U32;
+
+-- sometimes a value is stored on the
+   stack, and then it loses certain info
+   that was known ahead.
+   Apparently, this limitation may have
+   been removed in recent kernel
+   versions. but Paul Chaigno (solver)
+   does not know.
+
+   And saving on the stack may only be
+   something that happens with a larger
+   program or with a loopy program that
+   has a larger number of iterations,
+   forcing register reuse through an
+   intermediate stack spill.
+
+*** storing on a stack and returning the
+    register back will end up losing a
+    bunch of information on the
+    register.
+
+    This limitation _may_ have been
+    fixed in recent versions. But
+    unsure.
+
+Key insights:
+
+-- comparisons to max packet sizes
+   for any packet pointer. It is
+   insufficient to compare against
+   data_end, you also need to compare
+   the total offset against some fixed
+   quantities which are considered to be
+   maximum packet sizes inside the
+   verifier.
+
+   this is because "valid packet pointer
+   ranges" computed inside the verifier
+   are not just predicated on the
+   comparison with data_end.
+
+   they are also predicated on the
+   offsets being smaller than some
+   predetermined value (MAX_PACKET_OFF)
+   in the verifier code. 
