@@ -1,0 +1,87 @@
+(16)
+
+https://cilium.slack.com/archives/C4XCTGYEM/p1683759679032729
+
+Kay Ju posted on May 10th
+
+Map error while loading:
+
+map spin_lock_map: map create: operation
+not supported
+
+I'm assuming it's coming from the user
+space code?
+
+struct address
+{
+    __u32 ip;
+    __u32 port;
+    struct bpf_spin_lock lock;
+};
+
+struct
+{
+    __uint(type, BPF_MAP_TYPE_LRU_HASH);
+    __type(key, struct key);
+    __type(value, struct address);
+    __uint(max_entries, 128);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
+} address_map SEC(".maps");
+
+map spin_lock_map: map create: operation not supported
+
+spin_lock is only supported with some
+map types, specifically
+
+BPF_MAP_TYPE_HASH
+BPF_MAP_TYPE_ARRAY
+BPF_MAP_TYPE_CGROUP_STORAGE
+
+===========
+
+** concurrency question:
+   it is not possible to update a bpf
+   map counter safely and concurrently
+   from both user and kernel space
+   today:
+
+The thread is here:
+
+https://cilium.slack.com/archives/C4XCTGYEM/p1683821859959419
+
+simon sundberg says:
+
+I'm not sure it's possible to update a
+counter from both user space and a BPF
+program concurrently in a safe
+manner. There are some techniques which
+allow safe incrementing/decrementing of
+shared counters on the BPF side (atomic
+increments, per-CPU maps and spin-locks,
+as described by the nice blog post in 
+@Kay Ju
+'s answer). But none of these really
+work from user space (using
+__atomic_add_fetch() won't matter as
+you're operating on a copy of the map
+data in user space, per-CPU maps is no
+garantuee as the user space process can
+be preemted, and you can't keep a spin
+lock in user space between a read and
+update call).
+But maybe someone else has an idea of
+how it could be achieved? Otherwise you
+may have to rethink if you really need
+to update the same counter from both
+user space and the BPF program(s).
+
+My take:
+
+A key issue is that user space operates
+on a copy of the data always. Which
+means that updating it will require
+locking, but there are no shared locks
+as far as we know between the two things
+(user space cannot lock and preempt
+kernel from executing, hence it will be
+a bad idea anyway).
