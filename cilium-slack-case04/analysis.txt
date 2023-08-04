@@ -1,0 +1,98 @@
+(4)
+
+https://cilium.slack.com/archives/C4XCTGYEM/p1680806931561579
+
+Brandon Ewing, April 6th
+
+code:
+
+a variant of xdp_redirect_map_multi from
+kernel samples:
+https://github.com/torvalds/linux/blob/master/samples/bpf/xdp_redirect_map_multi.bpf.c
+
+// MAC rewrite to upstream
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, int);
+    __type(value, __be64);
+    __uint(max_entries, 32);
+} mac_map SEC(".maps");
+
+SEC("xdp_rewrite_mac_func")
+int xdp_rewrite_mac_func(struct xdp_md *ctx) {
+    void *data_end = (void *)(long)ctx->data_end;
+    void *data = (void *)(long)ctx->data;
+    int key = ctx->egress_ifindex;
+    struct ethhdr *eth = data;
+    __be64 *mac;
+    __u64 nh_off;
+
+    nh_off = sizeof(*eth);
+    if (data + nh_off > data_end)
+        return XDP_DROP;
+
+    mac = bpf_map_lookup_elem(&mac_map, &key);
+    if (mac)
+        __builtin_memcpy(eth->h_source, mac, ETH_ALEN);
+
+    return XDP_PASS;
+}
+
+this is the verifier error:
+
+func#0 @0
+0: R1=ctx(off=0,imm=0) R10=fp0
+; void *data_end = (void *)(long)ctx->data_end;
+0: (61) r2 = *(u32 *)(r1 +4)          ; R1=ctx(off=0,imm=0) R2_w=pkt_end(off=0,imm=0)
+; void *data = (void *)(long)ctx->data;
+1: (61) r6 = *(u32 *)(r1 +0)          ; R1=ctx(off=0,imm=0) R6_w=pkt(off=0,r=0,imm=0)
+; __u32 key = ctx->egress_ifindex;
+2: (61) r1 = *(u32 *)(r1 +20)
+invalid bpf_context access off=20 size=4
+verification time 263 usec
+stack depth 0
+processed 3 insns (limit 1000000) max_states_per_insn 0 total_states 0 peak_states 0 mark_read 0
+
+
+the issue: egress_ifindex is not
+available in the context as the program
+is called.
+
+apparently, if you change to
+ingress_ifindex (as opposed to egress)
+it can successfully load.
+
+To get egress, you need to start the
+section with xdp/devmap/ ... or
+something similar to the kernel sample
+example. Then it works.
+
+--> the key issue is one of the context
+    structure ctx providing the right
+    data structure that is required by
+    the verifier. It should include the
+    right fields, and assert that the
+    access is indeed possible. This
+    isn't directly available in the
+    verifier log. Instead, it must be
+    gleaned from the fact that the ctx
+
+** egress_ifindex is only accessible to
+   bpf programs of type BPF_XDP_DEVMAP
+
+   https://stackoverflow.com/questions/70771769/xdp-md-egress-ifindex-not-found-xdp-ebpf
+
+===========
+
+*** specific data structures
+    e.g. __sk_buff aren't defined in
+    quite the same way everywhere, so
+    using some member of the struct may
+    cause a compile error like
+    "incomplete definition of struct
+    __sk_buff"
+
+** note: the SEC("___/blah") the part in
+   the blank if the program type, used
+   by the compiler to generate the
+   correct data offsets, types, etc.
