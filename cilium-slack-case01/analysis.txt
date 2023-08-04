@@ -1,0 +1,88 @@
+https://cilium.slack.com/archives/C4XCTGYEM/p1678060571927059
+
+posted by Devin S on Sunday March 5th, 2023.
+
+static __always_inline int parse_ipv4hdr(void** dataCursor, void *dataEnd, struct iphdr **ipv4hdr)
+{
+	struct iphdr* ipv4Header = *dataCursor;
+
+	if ( *dataCursor + 1 > dataEnd)
+		return EXIT_FAILURE;
+
+	int hdrsize = ipv4Header->ihl * 4;
+
+	if ( *dataCursor + hdrsize > dataEnd )
+		return EXIT_FAILURE;
+
+	*dataCursor += hdrsize;
+	*ipv4hdr = ipv4Header;
+
+	return ipv4Header->protocol;
+}
+
+Verifier:
+
+; int hdrsize = ipv4Header->ihl * 4;
+21: (67) r4 <<= 2                     ; R4_w=scalar(umax=1020,var_off=(0x0; 0x3fc))
+22: (57) r4 &= 60                     ; R4_w=scalar(umax=60,var_off=(0x0; 0x3c))
+; if ( (void*) ipv4Header + hdrsize > dataEnd )
+23: (bf) r5 = r1                      ; R1=pkt(off=14,r=15,imm=0) R5_w=pkt(off=14,r=15,imm=0)
+24: (0f) r5 += r4                     ; R4_w=Pscalar(umax=60,var_off=(0x0; 0x3c)) R5_w=pkt(id=1,off=14,r=0,umax=60,var_off=(0x0; 0x3c))
+; if ( (void*) ipv4Header + hdrsize > dataEnd )
+25: (2d) if r5 > r2 goto pc+1         ; R2=pkt_end(off=0,imm=0) R5_w=pkt(id=1,off=14,r=14,umax=60,var_off=(0x0; 0x3c))
+; return ipv4Header->protocol;
+26: (71) r3 = *(u8 *)(r1 +9)
+invalid access to packet, off=23 size=1, R1(id=0,off=23,r=15)
+R1 offset is outside of the packet
+processed 32 insns (limit 1000000) max_states_per_insn 1 total_states 2 peak_states 2 mark_read 1
+
+libbpf: -- END LOG --
+libbpf: failed to load program 'xdp_redirect'
+libbpf: failed to load object 'ebpf_redirector.o'
+ERR: loading BPF-OBJ file(ebpf_redirector.o) (-22): Invalid argument
+ERR: loading file: ebpf_redirector.o
+
+
+Issue: bounds checking for
+ipv4Header->protocol failed.
+There is a diferent offset that is being
+accessed (ie: offsetof(struct
+iphdr.protocol) but the offset being
+checked is the IHL value * 4 from the
+header.
+
+So there is a mismatch of data access
+offset and check offsets, which are
+incomparable in general (packet may
+contain arbitrary data).
+
+"soolution" code that simon sundberg
+posted later:
+
+static __always_inline int parse_iphdr(struct hdr_cursor *nh,
+                       void *data_end,
+                       struct iphdr **iphdr)
+{
+    struct iphdr *iph = nh->pos;
+    int hdrsize;
+
+    if (iph + 1 > data_end)
+        return -1;
+
+    if (iph->version != 4)
+        return -1;
+
+    hdrsize = iph->ihl * 4;
+    /* Sanity check packet field is valid */
+    if(hdrsize < sizeof(*iph))
+        return -1;
+
+    /* Variable-length IPv4 header, need to use byte-based arithmetic */
+    if (nh->pos + hdrsize > data_end)
+        return -1;
+
+    nh->pos += hdrsize;
+    *iphdr = iph;
+
+    return iph->protocol;
+}
