@@ -1,0 +1,43 @@
+(15)
+
+https://cilium.slack.com/archives/C4XCTGYEM/p1683713276437839
+
+karthick bhaskar posted on May 10th
+
+  struct udphdr *udp = (void *)ip + sizeof(*ip);
+void *dns = (void *)udp + sizeof(struct udphdr);
+char *question = (char* )dns + 12;
+	i = 0;
+	length = question[i++];
+	do
+	{
+		bpf_printk ("SIZE: %d\n", length);
+		for (j = 0; j < length; j++)
+		{
+			bpf_printk ("%c", question[i + j]);
+		}
+		bpf_printk ("\n");
+		i += length;
+		length = question[i++];
+	} while (length != 0 && i < pkt->data_size);
+
+getting DNS questions from DNS packet,
+but fails verification.
+
+No verifier log is attached.
+
+Issues:
+
+question[i+j] isn't checked, but the
+value of j is bounded by length, which
+can take on any value from 0--255.
+
+even question[i] isn't checked at the
+end of the loop, there are many memory
+accesses without corresponding checks on
+safety. 
+
+loops can make it harder for the
+verifier to finish, since it needs to
+explore many code paths. There are
+nested loops in this code too.
