@@ -1,0 +1,89 @@
+(5)
+
+https://cilium.slack.com/archives/C4XCTGYEM/p1681309791189049
+
+Brandon Ewing on April 12th
+
+
+// src IP rewrite map
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, __u32);
+    __type(value, __be32);
+    __uint(max_entries, 32);
+} src_map SEC(".maps");
+
+
+SEC("xdp_devmap/foo")
+int xdp_rewrite_egress_func(struct xdp_md *ctx) {
+    void *data_end = (void *)(long)ctx->data_end;
+    void *data = (void *)(long)ctx->data;
+    struct hdr_cursor nh;
+    struct ethhdr *eth;
+    struct iphdr *iph;
+    __be64 *mac;
+    __be32 *srcip;
+    __u64 nh_off;
+    int eth_type;
+    int ip_type;
+
+    nh.pos = data;
+
+    eth_type = parse_ethhdr(&nh, data_end, &eth);
+
+    if (eth_type != bpf_htons(ETH_P_IP))
+        return XDP_DROP;
+
+    __u32 key = ctx->egress_ifindex;
+
+    mac = bpf_map_lookup_elem(&mac_map, &key);
+    if (mac)
+        __builtin_memcpy(eth->h_source, mac, ETH_ALEN);
+
+    ip_type = parse_iphdr(&nh, data_end, &iph);
+
+    if (ip_type != 17 || iph->version != 4)
+        return XDP_DROP;
+    srcip = bpf_map_lookup_elem(&src_map, &key);
+    if (srcip)
+        __builtin_memcpy(iph->saddr, srcip, 4);
+
+    return XDP_PASS;
+}
+
+
+; __builtin_memcpy(iph->saddr, srcip, 4);
+88: (61) r2 = *(u32 *)(r7 +12)        ; R2_w=scalar(umax=4294967295,var_off=(0x0; 0xffffffff)) R7=pkt(off=14,r=34,imm=0)
+; __builtin_memcpy(iph->saddr, srcip, 4);
+89: (61) r1 = *(u32 *)(r1 +0)         ; R1_w=scalar(umax=4294967295,var_off=(0x0; 0xffffffff))
+90: (bf) r3 = r1                      ; R1_w=scalar(id=4,umax=4294967295,var_off=(0x0; 0xffffffff)) R3_w=scalar(id=4,umax=4294967295,var_off=(0x0; 0xffffffff))
+91: (77) r3 >>= 24                    ; R3_w=scalar(umax=255,var_off=(0x0; 0xff))
+92: (73) *(u8 *)(r2 +3) = r3
+R2 invalid mem access 'scalar'
+verification time 404 usec
+stack depth 4
+processed 66 insns (limit 1000000) max_states_per_insn 0 total_states 4 peak_states 4 mark_read 2
+
+
+r2 is assumed to be a scalar (see the
+verifier log). It needs to be a pointer
+for memcpy to work.
+
+direct assignment will work:
+
+iph->saddr = *srcip;
+
+Also (from simon sundberg):
+
+__builtin_memcpy(&iph->saddr, srcip, 4);
+
+will work, forcing access through the
+pointer to iph->saddr  rather than
+iph->saddr as in the OP's source code.
+
+note that eth->h_source is already an
+array, so the reference
+(e.g. &eth->h_source) wasn't needed.
+
+(wow!)
+
