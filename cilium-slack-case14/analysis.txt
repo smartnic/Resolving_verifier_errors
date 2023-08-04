@@ -1,0 +1,90 @@
+(14)
+
+https://cilium.slack.com/archives/C4XCTGYEM/p1682855805555289
+
+Gourav Kumar (again!) posted on April
+30th.
+
+#define MAX_MSG_SIZE 8192 
+struct
+{
+    __uint(type, BPF_MAP_TYPE_RINGBUF);
+    __uint(max_entries, 256 * 1024); // 256 KB
+} socket_data_events SEC(".maps");
+
+
+// ring buffer...
+static __inline void perf_submit_buf(struct pt_regs *ctx, const enum traffic_direction_t direction, char *buf, int buf_size, int offset, struct conn_info_t *conn_info, struct socket_data_event_t *event)
+
+{
+
+    switch (direction)
+    {
+    case kEgress:
+        event->pos = conn_info->wr_bytes + offset;
+        break;
+    case kIngress:
+        event->pos = conn_info->rd_bytes + offset;
+        break;
+    }
+
+    // 8192 bytes
+    asm volatile("%[buf_size] &= 0x1fff;\n" ::[buf_size] "+r"(buf_size)
+                 :);
+    bpf_probe_read(&event->msg, buf_size & 0x1fff, buf);
+
+    if (buf_size > 0)
+    {
+        event->msg_size = buf_size;
+        bpf_ringbuf_submit(event, 0);
+    }
+}
+
+
+static __inline void perf_submit_wrapper(struct pt_regs *ctx, const enum traffic_direction_t direction, char *buf, int buf_size, struct conn_info_t *conn_info, struct socket_data_event_t *event)
+{
+
+    // perf_submit_buf(ctx, direction, buf, buf_size, buf_size, conn_info, event);
+
+    int bytes_sent = 0;
+    unsigned int i;
+#pragma unroll
+    for (i = 0; i < CHUNK_LIMIT; ++i)
+    {
+        int bytes_remaining = buf_size - bytes_sent;
+        int current_size = (bytes_remaining > MAX_MSG_SIZE && (i != CHUNK_LIMIT - 1)) ? MAX_MSG_SIZE : bytes_remaining;
+        perf_submit_buf(ctx, direction, buf + bytes_sent, current_size, bytes_sent, conn_info, event);
+        bytes_sent += current_size;
+        if (buf_size == bytes_sent)
+        {
+            return;
+        }
+    }
+}
+
+attempting to send large messages to
+user space after chunking them into
+smaller bits.
+
+OP didn't post the verifier log.
+
+OP himself found the solution, use
+bpf_ringbuf_reserve() with a fixed size
+of the reservation known ahead of time
+to the verifier.
+
+A folow up question on hitting some
+other verifier error:
+
+What is the limit of the chunks i can send, i am getting error this error:
+load program: argument list too long: 764: (1d) if r1 == r2 goto pc-503     ; frame1: R1_w=258048 R2_w=scalar(umax=4294967295,var_off=(0x0; 0xffffffff)): ; int by (truncated, 854 line(s) omitted)
+& this is when CHUNK_LIMIT >81 and
+MAX_MSG_SIZE=30720. And maximum entries
+in ring buffer is 256 KB .
+
+It is unclear whether this is a
+complexity limit or something else?
+
+a complexity limit makes it pretty clear
+that the number of instructions were
+exceeded beyond the limit of the kernel.
