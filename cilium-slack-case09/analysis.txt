@@ -1,0 +1,185 @@
+https://cilium.slack.com/archives/C4XCTGYEM/p1681817727796269
+
+Gaurav Kumar posted on April 18th
+
+static inline __attribute__((__always_inline__)) bool is_http_connection(struct conn_info_t *conn_info, const char *buf, size_t count) {
+    // If the connection was already identified as HTTP connection, no need to re-check it.
+    if (conn_info->is_http) {
+        return true;
+    }
+
+    // The minimum length of http request or response.
+    if (count < 16) {
+        return false;
+    }
+
+    bool res = false;
+    if (buf[0] == 'H' && buf[1] == 'T' && buf[2] == 'T' && buf[3] == 'P') {
+        res = true;
+    }
+    if (buf[0] == 'G' && buf[1] == 'E' && buf[2] == 'T') {
+        res = true;
+    }
+    if (buf[0] == 'P' && buf[1] == 'O' && buf[2] == 'S' && buf[3] == 'T') {
+        res = true;
+    }
+    if (buf[0] == 'P' && buf[1] == 'U' && buf[2] == 'T') {
+        res = true;
+    }
+    if (buf[0] == 'D' && buf[1] == 'E' && buf[2] == 'L' && buf[3] == 'E' && buf[4] == 'T' && buf[5] == 'E') {
+        res = true;
+    }
+    if (buf[0] == 'H' && buf[1] == 'E' && buf[2] == 'A' && buf[3] == 'D') {
+        res = true;
+    }
+    if (buf[0] == 'P' && buf[1] == 'A' && buf[2] == 'T' && buf[3] == 'C' && buf[4] == 'H') {
+        res = true;
+    }
+    
+    // Add other HTTP request methods here if needed.
+
+    if (res) {
+        conn_info->is_http = true;
+    }
+
+    return res;
+}
+
+// read sys call
+SEC("kprobe/sys_read")
+int syscall__probe_entry_read(struct pt_regs *ctx) {
+	u64 id  = bpf_get_current_pid_tgid();
+	u64 pid = id >> 32;
+	// if (pid != A_PID)
+	// 	return 0;
+	bpf_printk("read entry called for [PID:%llu]\n", pid);
+
+	// Stash arguments
+	struct data_args_t read_args = {};
+	char *buf;
+	bpf_probe_read(&buf, sizeof(buf), &(PT_REGS_PARM2(ctx)));
+
+	read_args.fd  = (PT_REGS_PARM1(ctx));
+	read_args.buf = buf;
+
+	bpf_map_update_elem(&active_read_args_map, &id, &read_args, BPF_ANY);
+	return 0;
+}
+
+
+static inline __attribute__((__always_inline__)) void process_data(struct pt_regs *ctx, u64 id, enum traffic_direction_t direction, const struct data_args_t *args, size_t bytes_count) {
+	// Always check access to pointer before accessing them.
+	if (args->buf == NULL) {
+		return;
+	}
+
+	// For read and write syscall, the return code is the number of bytes written or read, so zero means nothing
+	// was written or read, and negative means that the syscall failed. Anyhow, we have nothing to do with that syscall.
+	if (bytes_count <= 0) {
+		return;
+	}
+
+	u32 pid    = id >> 32;
+	u64 pid_fd = ((u64)pid << 32) | (u32)args->fd;
+
+	struct conn_info_t *conn_info = bpf_map_lookup_elem(&conn_info_map, &pid_fd);
+	if (conn_info == NULL) {
+		// The FD being read/written does not represent an IPv4 socket FD.
+		return;
+	}
+
+	// Check if the connection is already HTTP, or check if that's a new connection, check protocol and return true if that's HTTP.
+	if (is_http_connection(conn_info, args->buf, bytes_count)) {
+		// allocate new event.
+		u32 kZero                         = 0;
+		struct socket_data_event_t *event = bpf_map_lookup_elem(&socket_data_event_buffer_heap, &kZero);
+
+		if (event == NULL) {
+			return;
+		}
+
+		// Fill the metadata of the data event.
+		event->attr.timestamp_ns = bpf_ktime_get_ns();
+		event->attr.direction    = direction;
+		event->attr.conn_id      = conn_info->conn_id;
+
+		// perf_submit_wrapper(ctx, direction, args->buf, bytes_count, conn_info, event);
+	}
+
+	// Update the conn_info total written/read bytes.
+	switch (direction) {
+	case kEgress:
+		conn_info->wr_bytes += bytes_count;
+		break;
+	case kIngress:
+		conn_info->rd_bytes += bytes_count;
+		break;
+	}
+}
+
+
+SEC("kretprobe/sys_read")
+int syscall__probe_ret_read(struct pt_regs *ctx) {
+    u64 id  = bpf_get_current_pid_tgid();
+    u64 pid = id >> 32;
+    // if (pid != A_PID)
+    //  return 0;
+
+    bpf_printk("read exit called for [PID:%llu]\n", pid);
+
+    // The return code the syscall is the number of bytes read as well.
+    size_t bytes_count = PT_REGS_RC(ctx); // Also stands for return code.
+
+    struct data_args_t *read_args = bpf_map_lookup_elem(&active_read_args_map, &id);
+    if (read_args) {
+        // kIngress is an enum value that let's the process_data function
+        // to know whether the input buffer is incoming or outgoing.
+        process_data(ctx, id, kIngress, read_args, bytes_count);
+
+        int ret = bpf_map_delete_elem(&active_read_args_map, &id);
+        if (ret) {
+            // Handle the error...
+            bpf_printk("error deleting the entry from the active_read_args_map:%d\n", ret);
+        }
+    }
+    return 0;
+}
+
+
+
+The full verifier log is missing from
+this question. Only the small error
+excerpt is available:
+
+Loading objects: field SyscallProbeRetRead: program syscall__probe_ret_read: load program: permission denied: 39: (71) r2 = *(u8 *)(r1 +0): R1 invalid mem access 'scalar' (62 line(s) omitted)
+2023/04/18 17:13:40 invalid program: bad file descriptor
+exit status 1
+
+
+Clearly there is some register which is
+being used as a scalar to dereference
+something rather than being used as a
+pointer.
+
+It could be because some operation was
+done on the pointer which accoring to
+the verifier makes it unable to access
+it as a pointer.
+
+The OP finally says :
+
+When i comment  the code where i am checking for:
+HTTP POST, GET etc then i don't get the error.
+
+I thought bytes_count is related to the buffer size, i was not checking the buf size, got it fixed just by checking the length of the buf array.
+
+So it looks like the error was in
+accessing "buf", not the conn_sock.
+
+The error is in not knowing which limit
+be checked against which memory
+buffer. If you simply count against some
+other variable (assuming it will be your
+valid access limit) then the verifier
+cannot be sure that the access is indeed
+safe
