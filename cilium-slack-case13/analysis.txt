@@ -1,0 +1,41 @@
+(13)
+
+https://cilium.slack.com/archives/C4XCTGYEM/p1682851987630229
+
+yousef ashraf posted on April 30th.
+
+didn't know to use -g and BTF-compatible
+map definitions.
+
+Used
+
+struct bpf_map_def SEC("maps") connection_map_udp =
+{
+    .type = BPF_MAP_TYPE_LRU_HASH,
+    .key_size = sizeof(struct connection_key),
+    .value_size = sizeof(struct connection_stats_srcdst_udp),
+    .max_entries = MAX_IPS
+};
+
+and also
+
+struct {
+    __uint(type, BPF_MAP_TYPE_LRU_HASH);
+    __type(key, struct connection_key);
+    __type(value, struct connection_stats_srcdst_udp);
+    __uint(max_entries, MAX_IPS);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
+} connection_map_udp SEC(".maps");
+
+
+and still got errors
+
+libbpf: BTF is required, but is missing or corrupted.
+ERROR: opening BPF object file failed
+Unable to load program
+libbpf: BTF is required, but is missing or corrupted.
+ERROR: opening BPF object file failed
+Unable to load program
+
+*** a compiler flag issue, no -g flag
+    when compiling.
