@@ -1,0 +1,83 @@
+(6)
+
+https://cilium.slack.com/archives/C4XCTGYEM/p1681667880881269
+
+Gaurav Kumar posted on April 16th
+
+struct accept_args_t {
+	struct sockaddr_in *addr;
+};
+
+
+SEC("kprobe/sys_accept")
+int syscall__probe_entry_accept(struct pt_regs *ctx, int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
+	u64 id  = bpf_get_current_pid_tgid();
+	u64 pid = id >> 32;
+	if (pid != 100776)
+		return 0;
+	bpf_printk("accept entry called for [PID:%llu]\n", pid);
+
+	struct accept_args_t *accept_args = bpf_map_lookup_elem(&active_accept_args_map, &id);
+	if (accept_args) {
+		bpf_printk("accept_args_t exists for [ID:%llu]\n", id);
+	} else {
+		bpf_printk("accept_args_t doesn't exist for [ID:%llu]\n", pid);
+		struct accept_args_t new_accept_args = {};
+		
+		u32 size = sizeof(struct sockaddr_in);
+		bpf_probe_read(new_accept_args.addr, size, addr);  // this line is causing the below error.
+		bpf_map_update_elem(&active_accept_args_map, &id, &new_accept_args, BPF_ANY);
+	}
+
+	return 0;
+}
+
+
+verifier error:
+
+program syscall__probe_entry_accept: load program: permission denied: 0: (bf) r6 = r3: R3 !read_ok (4 line(s) omitted) exit status 1
+
+
+some register shouldn't be
+read. Apparently, the ebpf code only has
+one argument, and the system call's
+arguments must be gotten throguh
+specific macros like
+__PT_SYSCALL_PARAM{1,5}
+(https://github.com/libbpf/libbpf/blob/master/src/bpf_tracing.h#L97)
+or
+BPF_KPROBE_SYSCALL
+(https://github.com/libbpf/libbpf/blob/master/src/bpf_tracing.h#L893) 
+
+then possible to write the eBPF program
+as if:
+
+SEC("ksyscall/accept")
+int BPF_KPROBE_SYSCALL(probe_entry_accept, int sockfd, struct sockaddr *addr, socklen_t *addrlen){
+[...]
+
+OP got things working using
+PT_REGS_PARM2 macro.
+
+==> key issue here seems that there is a
+specific way in which these eBPF
+programs should be invoked. You can't
+just call the tracing eBPF program with
+an arbitrary number of arguments, even
+though the system call you are tracing
+might be provided all of those
+arguments. Instead, there are specific
+APIs to use for the particular program
+type to acess the arguments of the
+system call itself.
+
+The weird thing is that this doesn't
+show up as a compile error (the fnction
+shouldn't have this many formal
+parameters in the first place and have
+some of them uninitialized), but as a
+verifier error!!
+
+This shouldn't have been a
+verification/load time error in the
+first place
